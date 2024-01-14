@@ -1,0 +1,9 @@
+int i;
+char c;
+float f;
+string s;
+bool b;
+beginProgram
+i := 1;
+c := 'a';
+endProgram
