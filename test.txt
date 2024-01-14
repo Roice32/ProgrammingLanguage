@@ -1,9 +1,8 @@
-Int i;
-Char c;
-Float f;
-String s;
-Bool b;
+Int i <-- -4;
+Char c <-- 'a';
+Float f <-- 10.55;
+String s <-- "stefan";
+Bool b <-- false;
 beginProgram
-i := 2;
-c := 'a';
+i <-- 2;
 endProgram
