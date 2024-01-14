@@ -1,8 +1,8 @@
-int i;
-char c;
-float f;
-string s;
-bool b;
+Int i;
+Char c;
+Float f;
+String s;
+Bool b;
 beginProgram
 i := 2;
 c := 'a';

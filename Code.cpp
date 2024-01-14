@@ -1,4 +1,4 @@
-#include "IDList.h"
+#include "Code.h"
 
 void IDList::addVar(const string name, const string type)
 {
@@ -12,7 +12,7 @@ bool IDList::existsVar(const string name) const
 
 void IDList::printVars() const
 {
-    for (const auto &var: IDs)
+    for (const auto &var : IDs)
     {
         cout << "[Name: " << var.first << ", Type: " << var.second << "]\n";
     }
