@@ -1,4 +1,4 @@
 # Files to be ignored by git
 
-vscode/
+.vscode/
 ABCDM
