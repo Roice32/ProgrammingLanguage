@@ -4,6 +4,6 @@ float f;
 string s;
 bool b;
 beginProgram
-i := 1;
+i := 2;
 c := 'a';
 endProgram
