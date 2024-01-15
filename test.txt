@@ -7,7 +7,7 @@ Float f <-- 10.55;
 String s <-- "stefan";
 Bool b <-- false;
 Custom mom dasd;
-Int iarr[22];
+Int iarr[6];
 beginProgram
 i <-- 2;
 endProgram

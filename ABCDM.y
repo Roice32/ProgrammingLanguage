@@ -125,7 +125,7 @@ decl: TYPE ID    { if(!ids.existsVar($2))
     // TO DO: ALL OTHER TYPES OF INIT
     | CUSTOM ID ID    { if(cts.existsCustom($2))
                             if(!ids.existsVar($3))
-                                ids.addCustomVar($3, $2);
+                                ids.addCustomVar($3, $2, &cts);
                             else
                             {
                                 sprintf(errmsg, "Variable '%s' already declared.", $3);
@@ -181,6 +181,7 @@ int main(int argc, char** argv)
      yyparse();
      cout << "Variables:" << endl;
      ids.printVars();
+     cout << endl;
      cts.printCustoms();
 }
 // TO DO OVERALL: CONST/VAR
