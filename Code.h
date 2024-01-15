@@ -59,3 +59,16 @@ public:
     void printCustoms() const;
     ~CustomTypesList();
 };
+
+class FunInfo
+{
+public:
+    string returnType;
+    int nParam;
+};
+
+class FunctionsList
+{
+public:
+    unordered_map<string, FunInfo> Funs;
+};

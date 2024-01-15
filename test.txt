@@ -1,14 +1,29 @@
-Custom first { Int a; Float b; };
-Custom third { Char c; String a; };
-Int i <-- -4;
-Char c <-- 'a';
-Custom first x;
-Float f <-- 10.55;
-String s <-- "stefan";
-Bool b <-- false;
-Custom mom dasd;
-Int iarr[6];
-beginProgram
+    beginCustoms
+Custom first { Neverchanging Int a; Changing Float b; };
+Custom third { Changing Char c; Changing String a; };
+    endCustoms
+
+    beginGlobalVars
+Changing Int i <-- -4;
+Changing Char c <-- 'a';
+Changing Custom first x;
+Changing Float f <-- 10.55;
+Changing String s <-- "stefan";
+Neverchanging Bool b <-- true;
+Changing Custom mom dasd;
+Changing Int iarr[6];
+    endGlobalVars
+
+    beginGlobalFuns
+Int f1(Int a)
+{
+    Eval(1+2);
+    TypeOf(1+a);
+}
+    endGlobalFuns
+
+    beginProgram
 i <-- 2;
-x//b;
-endProgram
+iarr[2] <-- x//b;
+i <-- (5+2)*3;
+    endProgram
