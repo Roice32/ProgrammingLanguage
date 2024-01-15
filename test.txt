@@ -1,8 +1,11 @@
+Custom first { Int a; Float b; };
+Custom third { Char c; String a; };
 Int i <-- -4;
 Char c <-- 'a';
 Float f <-- 10.55;
 String s <-- "stefan";
 Bool b <-- false;
+Int iarr[22];
 beginProgram
 i <-- 2;
 endProgram
