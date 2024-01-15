@@ -38,3 +38,14 @@ public:
     void printVars() const;
     ~IDList();
 };
+
+class CustomTypesList
+{
+public:
+    unordered_map<string, IDList> CustomTypes;
+    
+    bool existsCustom(const string name) const;
+    void addCustom(const string name, const IDList contents);
+    void printCustoms() const;
+    ~CustomTypesList();
+};
