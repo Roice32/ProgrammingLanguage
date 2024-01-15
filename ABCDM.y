@@ -29,7 +29,7 @@ class IDList ids;
 %start progr
 
 %%
-progr: declarations block    { printf("\tThe program is correct!\n"); }
+progr: declarations block    { printf("\tThe program is correct!\n"); } // TO DO: MAKE SURE THIS F-ER DOESN'T PRINT WHEN ERRORS
      ;
 
 declarations: decl ';'          
@@ -46,13 +46,42 @@ TYPE: INT    { $$ = $1; }
 
 decl: TYPE ID    { if(!ids.existsVar($2))
                        ids.addVar($2,$1);
+                   else
+                   {
+                       char errmsg[128];
+                       sprintf(errmsg, "Variable '%s' already declared.", $2);
+                       yyerror(errmsg);
+                   }
                  }
     | TYPE ID ASSIGN VALUE    { if(!ids.existsVar($2)) // TO DO: MAKE SURE TYPEOF(VALUE) = TYPE
                                 {
                                     ids.addVar($2,$1);
                                     ids.setValue($2,$4);
                                 }
+                                else
+                                {
+                                    char errmsg[128];
+                                    sprintf(errmsg, "Variable '%s' already declared.", $2);
+                                    yyerror(errmsg);
+                                }
                               }
+    | TYPE ID '[' INT_VAL ']'    { if(!ids.existsVar($2)) // TO DO: MAKE IT TAKE EXPRESSIONS
+                                   {
+                                        int size;
+                                        sscanf($4, "%d", &size);
+                                        if(size>0)
+                                             ids.addArrayVar($2, $1, size);
+                                        else
+                                             yyerror("Size of array must be positive integer.");
+                                   }
+                                   else
+                                   {
+                                        char errmsg[128];
+                                        sprintf(errmsg, "Variable '%s' already declared.", $2);
+                                        yyerror(errmsg);
+                                   }
+                                 }
+    // TO DO: ALSO LET ARRAYS BE INITIALIZED
     | TYPE ID '(' list_param ')'  
     | TYPE ID '(' ')'  
     ;
@@ -90,7 +119,7 @@ call_list: INT_VAL
          ;
 %%
 
-void yyerror(const char * s)
+void yyerror(const char* s)
 { printf("Error: \"%s\"\n\tAt line: %d.\n",s,yylineno); }
 
 int main(int argc, char** argv)

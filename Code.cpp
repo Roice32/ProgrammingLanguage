@@ -1,12 +1,34 @@
 #include "Code.h"
 
-VarInfo::VarInfo(char type, bool variable = true)
+VarInfo::VarInfo()
 {
-    this->type = type;
-    this->variable = variable;
+    type = 0;
+    intVal = 0;
+    floatVal = 0;
+    charVal = 0;
+    stringVal = "";
+    boolVal = false;
+    arrSize = 0;
+    array = nullptr;
+    isVariable = false;
 }
 
-VarInfo::~VarInfo() {}
+VarInfo::VarInfo(const char type, const bool variable, const int size = 0)
+{
+    this->type = type;
+    this->isVariable = variable;
+    this->arrSize = size;
+    if(arrSize>0)
+        array = new VarInfo[arrSize];
+    else
+        array = nullptr;
+}
+
+VarInfo::~VarInfo() // F-ER THROWS SEGMENTATION FAULT
+{
+    //if(array!=nullptr)
+    //    delete[] array;
+}
 
 void IDList::setValue(const string name, const char* value)
 {
@@ -31,9 +53,15 @@ void IDList::setValue(const string name, const char* value)
     }
 }
 
-void IDList::addVar(const string name, const char type)
+void IDList::addVar(const string name, const char type)  // TO DO: CONST/VAR
 {
-    VarInfo info(type);
+    VarInfo info(type, true);
+    IDs.insert({name, info});
+}
+
+void IDList::addArrayVar(const string name, const char type, const int size)  // TO DO: CONST/VAR
+{
+    VarInfo info(type, true, size);
     IDs.insert({name, info});
 }
 
@@ -46,7 +74,10 @@ void IDList::printVars() const
 {
     for (const auto &var : IDs)
     {
-        cout << "[Name: " << var.first << ", Type: ";
+        cout << "[Name: " << var.first;
+        if(var.second.arrSize>0)
+            cout << ", Array size: " << var.second.arrSize; // TO DO: ALSO PRINT VALUES
+        cout << ", Type: ";
         switch(var.second.type)
         {
             case 'i':
