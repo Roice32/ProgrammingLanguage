@@ -27,7 +27,7 @@ class CustomTypesList cts;
 %token <id> ID
 %type <varType> TYPE
 %token <varType> INT FLOAT CHAR STRING BOOL
-%token CUSTOM
+%token CUSTOM ACCESS
 %type <carryOver> CONTENTS
 %type <rawValue> VALUE
 %token <rawValue> INT_VAL FLOAT_VAL CHAR_VAL STRING_VAL BOOL_VAL
@@ -158,6 +158,24 @@ list: statement ';'
 statement: ID ASSIGN ID
          | ID ASSIGN VALUE    {;} // TO DO
          | ID '(' call_list ')'
+         | ID ACCESS ID    { if(ids.existsVar($1)) // HERE ONLY TEMPORARILY; ALSO CHECK CUSTOM-TYPE ONLY
+                                 if(ids.IDs.find($1)->second.fields->IDs.find($3) != ids.IDs.find($1)->second.fields->IDs.end())
+                                 {
+                                     class VarInfo* r = ids.accessCustomField($1, $3); // PLACEHOLDER FOR TESTING
+                                     r->printType();
+                                     r->printPlainVal();
+                                 }
+                                 else
+                                 {
+                                     sprintf(errmsg, "Variable '%s' has no field '%s'.", $1, $3);
+                                     yyerror(errmsg);
+                                 }
+                             else
+                             {
+                                 sprintf(errmsg, "Variable '%s' not declared.", $1);
+                                 yyerror(errmsg);
+                             }
+                           }
          ;
 
 VALUE: INT_VAL    { $$ = $1; }
