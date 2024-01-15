@@ -2,9 +2,11 @@ Custom first { Int a; Float b; };
 Custom third { Char c; String a; };
 Int i <-- -4;
 Char c <-- 'a';
+Custom first x;
 Float f <-- 10.55;
 String s <-- "stefan";
 Bool b <-- false;
+Custom mom dasd;
 Int iarr[22];
 beginProgram
 i <-- 2;

@@ -3,6 +3,7 @@
 VarInfo::VarInfo()
 {
     type = 0;
+    customType = "";
     intVal = 0;
     floatVal = 0;
     charVal = 0;
@@ -24,13 +25,25 @@ VarInfo::VarInfo(const char type, const bool variable, const int size = 0)
         array = nullptr;
 }
 
+VarInfo::VarInfo(const string type, const bool variable, const int size = 0)
+{
+    this->type = 'u';
+    this->customType = type;
+    this->isVariable = variable;
+    this->arrSize = size;
+    if(arrSize>0)
+        array = new VarInfo[arrSize];
+    else
+        array = nullptr;
+}
+
 VarInfo::~VarInfo() // F-ER THROWS SEGMENTATION FAULT
 {
     //if(array!=nullptr)
     //    delete[] array;
 }
 
-void IDList::setValue(const string name, const char* value)
+void IDList::setValue(const string name, const char* value) // TO DO: CUSTOM TYPES
 {
     VarInfo &ref = this->IDs.at(name);
     switch(ref.type)
@@ -65,6 +78,12 @@ void IDList::addArrayVar(const string name, const char type, const int size)  //
     IDs.insert({name, info});
 }
 
+void IDList::addCustomVar(const string name, const string type)
+{
+    VarInfo info(type, true);
+    IDs.insert({name, info});
+}
+
 bool IDList::existsVar(const string name) const
 {
     return IDs.find(name) != IDs.end();
@@ -94,6 +113,9 @@ void IDList::printVars() const
         break;
         case 'b':
             cout << "Bool, Value: " << (var.second.boolVal==true?"true":"false") << "]\n";
+        break;
+        case 'u':
+            cout << "Custom (" << var.second.customType << ")]\n";
         break;
         }
     }

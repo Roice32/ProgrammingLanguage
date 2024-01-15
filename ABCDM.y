@@ -122,6 +122,21 @@ decl: TYPE ID    { if(!ids.existsVar($2))
     // TO DO: ALSO LET ARRAYS BE INITIALIZED
     | TYPE ID '(' list_param ')'  
     | TYPE ID '(' ')'
+    // TO DO: ALL OTHER TYPES OF INIT
+    | CUSTOM ID ID    { if(cts.existsCustom($2))
+                            if(!ids.existsVar($3))
+                                ids.addCustomVar($3, $2);
+                            else
+                            {
+                                sprintf(errmsg, "Variable '%s' already declared.", $3);
+                                yyerror(errmsg);
+                            }
+                        else
+                        {
+                            sprintf(errmsg, "Custom type '%s' not declared.", $2);
+                            yyerror(errmsg);
+                        }
+                      }
     ;
 
 list_param: param

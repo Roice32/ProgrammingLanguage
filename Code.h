@@ -8,6 +8,7 @@ class VarInfo
 {
 public:
     char type;
+    string customType;
     
     int intVal = 0;
     float floatVal = 0;
@@ -23,6 +24,7 @@ public:
     // TO DO: Scope
     VarInfo();
     VarInfo(const char type, const bool variable, const int size);
+    VarInfo(const string type, const bool variable, const int size);
     ~VarInfo();
 };
 
@@ -34,6 +36,7 @@ public:
     bool existsVar(const string name) const;
     void addVar(const string name, const char type);
     void addArrayVar(const string name, const char type, const int size);
+    void addCustomVar(const string name, const string type);
     void setValue(const string name, const char* value);
     void printVars() const;
     ~IDList();
