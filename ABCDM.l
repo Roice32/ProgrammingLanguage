@@ -20,6 +20,7 @@
 "true"|"false" { yylval.rawValue = strdup(yytext); return BOOL_VAL; }
 
 "Custom" { yylval.varType = 'u'; return CUSTOM; }
+"//" { return ACCESS; }
 
 "<--"    { return ASSIGN; }
 

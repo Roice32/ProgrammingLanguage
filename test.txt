@@ -10,4 +10,5 @@ Custom mom dasd;
 Int iarr[6];
 beginProgram
 i <-- 2;
+x//b;
 endProgram
