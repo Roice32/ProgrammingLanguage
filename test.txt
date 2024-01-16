@@ -1,6 +1,9 @@
     beginCustoms
 Custom first { Neverchanging Int a; Changing Float b; };
 Custom third { Changing Char c; Changing String a; };
+
+Custom elev { Changing Int nrMat; Changing String name;};
+
     endCustoms
 
     beginGlobalVars
@@ -12,6 +15,8 @@ Changing String s <-- "stefan";
 Neverchanging Bool b <-- true;
 Changing Custom mom dasd;
 Changing Int iarr[6];
+Changing Int vec[10];
+Changing Custom elev e1;
     endGlobalVars
 
     beginGlobalFuns
@@ -20,10 +25,103 @@ Int f1(Int a)
     Eval(1+2);
     TypeOf(1+a);
 }
+
+Bool f2(Int val2)
+{
+    Changing Int i2 <-- 1;
+    Changing Bool rezultat2 <-- false;
+    Changing Int random2 <-- 2;
+    For(i2 <-- 2; i2 < val1 ; i2 <-- i2 + 1)Do
+    {
+        If((val2 % i2) == 0)
+        {
+            rezultat2 <-- true;
+        }
+        Otherwise
+        {
+            random2 <-- random1 + 2;
+        }
+    }
+    random2 <-- (val2 - random1);
+}
+
+int f3()
+{
+    Changing Float vec3[10];
+    Changing Int i3;
+    For(i3 <-- 1; i3 <= 10 ; i3 <-- i3 + 1)Do
+    {
+        If((i3 % 2) == 0)
+        {
+            vec3[i3] <-- 1;
+        }
+        Otherwise
+        {
+            vec3[i3] <-- 0;
+        }
+    } 
+}
     endGlobalFuns
 
     beginProgram
 i <-- 2;
 iarr[2] <-- x//b;
 i <-- (5+2)*3;
+
+vec[11] <-- 1;
+vec[6] <-- -4;
+vec[5] <-- 'a';
+vec[true] <-- 2;
+vec[-1] <-- 3;
+
+
+e1//nrMat <-- 2.34;
+e1//nrMat <-- 1;
+e1//name <-- 23;
+e1//name <-- "Alex";
+e1//nrMat <-- x//b;
+
+vec[1] <-- e1//name;
+vec[1] <-- e1//nrMat;
+
+Neverchanging Char litera <-- 'a';
+litera <-- 'b';
+
+Neverchanging Int numarInt <-- 1;
+numarInt <-- 2;
+
+Neverchanging Float numarFloat <-- 1.2;
+numarFloat <-- 1.3;
+
+Neverchanging String cuvant <-- "Nacho";
+cuvant <-- "Alex";
+
+Neverchanging Bool ceva <-- false;
+ceva <-- true;
+
+Changing Int i4 <-- 1;
+While(i4 < 10)
+{
+    If(i =/= 21)
+    {
+        i4 <-- i4 + 1;
+    }
+    Otherwise
+    {
+        i4 <-- i4 + 2;
+    }
+}
+
+if(i4 == 11)
+{
+  While(i4 =/= 0)
+  {
+    i4 <-- i4 - 1;
+  }  
+}
+Otherwise
+{
+    i4 <-- i4;
+}
+
     endProgram
