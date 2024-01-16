@@ -14,7 +14,8 @@ Neverchanging Bool b <-- true;
     beginProgram
 Neverchanging Char x <-- 'c';
 Changing Char cClone <-- c;
-Neverchanging Int j <-- i;
+Changing Int iArr[3];
+Neverchanging Char cArr[6] <-- [ 0 ];
 Changing Float fClone <-- f;
 Changing String s <-- "abcd";
     endProgram

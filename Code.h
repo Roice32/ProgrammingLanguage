@@ -44,7 +44,7 @@ public:
 
     bool existsVar(const string name) const;
     void addVar(const string name, const bool variable, const char type, const string scope);
-    void addArrayVar(const string name, const char type, const int size, const string scope);
+    void addArrayVar(const string name, const bool variable, const string type, const int size, const string scope);
     void addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList *cts);
     VarInfo *accessCustomField(const string name, const string field);
     void setValue(const string name, const char *value);

@@ -115,9 +115,10 @@ void IDList::addVar(const string name, const bool variable, const char type, con
     IDs.insert({name, info});
 }
 
-void IDList::addArrayVar(const string name, const char type, const int size, const string scope)  // TO DO: CONST/VAR
+// MAKE THIS WORK FOR CUSTOMS
+void IDList::addArrayVar(const string name, const bool variable, const string type, const int size, const string scope)  // TO DO: CONST/VAR
 {
-    VarInfo info(type, true, size, scope);
+    VarInfo info(type[0], variable, size, scope);
     IDs.insert({name, info});
 }
 
@@ -189,9 +190,9 @@ void VarInfo::printArray() const
 {
     for(int i=0; i<arrSize; i++)
     {
-        cout << "|";
         array[i].printPlainVal();
-        cout << "|";
+        if(i<arrSize-1)
+            cout << "|";
     }
 }
 
