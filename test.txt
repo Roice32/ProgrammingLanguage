@@ -68,11 +68,36 @@ i <-- 2;
 iarr[2] <-- x//b;
 i <-- (5+2)*3;
 
+i <-- -1;
+i <-- 'c';
+i <-- "stefan";
+i <-- 1.23;
+i <-- true;
+
 vec[11] <-- 1;
 vec[6] <-- -4;
 vec[5] <-- 'a';
+vec[4] <-- "stefan";
+vec[3] <-- 1.22;
+vec[2] <-- false;
+vec['c'] <-- 1;
+vec["stefan"] <-- 1;
+vec[1.22] <-- 1;
 vec[true] <-- 2;
 vec[-1] <-- 3;
+vec[1] <-- 1;
+
+
+Changing Int varVec;
+varVec <-- vec[-1];
+varVec <-- vec['c'];
+varVec <-- vec[c];
+varVec <-- vec["Alex"];
+varVec <-- vec[s];
+varVec <-- vec[1.22];
+varVec <-- vec[f];
+varVec <-- vec[true]
+varVec <-- vec[b];
 
 
 e1//nrMat <-- 2.34;
@@ -112,12 +137,55 @@ While(i4 < 10)
     }
 }
 
-if(i4 == 11)
+If(i4 == 11)
 {
   While(i4 =/= 0)
   {
     i4 <-- i4 - 1;
   }  
+}
+Otherwise
+{
+    i4 <-- i4;
+}
+
+While(5 > i4)
+{
+    If((i4 % 2) == 0)
+    {
+        i4 <-- i4 + 1;
+    }
+    Otherwise
+    {
+        i4 <-- i4 + 2;
+    }
+}
+
+Changing Int i5;
+For(i5 <-- 1; 5 => i5; i5 <-- i5 + 1)Do
+{
+    If(5 == i4)
+    {
+        While(10 =/= i4)
+        {
+            i4 <-- i4 + 1;
+        }
+    }
+    Otherwise
+    {
+        i4 <-- i4;
+    }
+}
+
+If(i4 == 10)
+{
+    For(i5 <-- 1; i5 <= 2; i5 <-- i5 + 1)Do
+    {
+        While(i4 =/= 12)
+        {
+            i4 <-- i4 + 1;
+        }
+    }
 }
 Otherwise
 {
