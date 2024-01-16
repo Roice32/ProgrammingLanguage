@@ -1,5 +1,10 @@
 #include "Code.h"
 
+bool isPlainType(const char* type)
+{
+    return type[1]=='\0' && (type[0]=='i' || type[0]=='f' || type[0]=='c' || type[0]=='s' || type[0]=='b');
+}
+
 VarInfo::VarInfo()
 {
     type = 0;
@@ -12,26 +17,34 @@ VarInfo::VarInfo()
     arrSize = 0;
     array = nullptr;
     isVariable = false;
+    scope = "";
 }
 
-VarInfo::VarInfo(const char type, const bool variable, const int size = 0)
+VarInfo::VarInfo(const char type, const bool variable, const int size, const string scope)
 {
     this->type = type;
+    this->customType = "";
     this->isVariable = variable;
+    this->scope = scope;
     this->arrSize = size;
-    if(arrSize>0)
-        array = new VarInfo[arrSize];
+    if(this->arrSize>0)
+    {
+        this->array = new VarInfo[arrSize];
+        for(int i=0; i < arrSize; i++)
+            this->array[i].type = this->type;
+    }
     else
-        array = nullptr;
-    fields = nullptr;
+        this->array = nullptr;
+    this->fields = nullptr;
 }
 
 // LORD KNOWS HOW TO MODIFY THIS LATER
-VarInfo::VarInfo(const string type, const bool variable, const int size, const CustomTypesList* cts)
+VarInfo::VarInfo(const string type, const bool variable, const int size, const string scope, const CustomTypesList* cts)
 {
     this->type = 'u';
     this->customType = type;
     this->isVariable = variable;
+    this->scope = scope;
     this->arrSize = size;
     if(arrSize>0)
         array = new VarInfo[arrSize];
@@ -40,7 +53,7 @@ VarInfo::VarInfo(const string type, const bool variable, const int size, const C
     fields = new IDList;
     const IDList* neededFields = &cts->CustomTypes.find(type)->second;
     for(const auto& fld : neededFields->IDs)
-        fields->addVar(fld.first, fld.second.type);
+        fields->addVar(fld.first, variable, fld.second.type, "Inherited (Member)");
 }
 
 VarInfo::~VarInfo() // F-ER THROWS SEGMENTATION FAULT
@@ -72,15 +85,39 @@ void IDList::setValue(const string name, const char* value) // TO DO: CUSTOM TYP
     }
 }
 
-void IDList::addVar(const string name, const char type)  // TO DO: CONST/VAR
+// TO DO: MODIFY THIS TO WORK FOR ARRAYS
+void IDList::copyValue(const string name, const VarInfo *target)
 {
-    VarInfo info(type, true);
+    VarInfo &ref = this->IDs.at(name);
+    switch(ref.type)
+    {
+    case 'i':
+        ref.intVal = target->intVal;
+    break;
+    case 'f':
+        ref.floatVal = target->floatVal;
+    break;
+    case 'c':
+        ref.charVal = target->charVal;
+    break;
+    case 's':
+        ref.stringVal = target->stringVal;
+    break;
+    case 'b':
+        ref.boolVal = target->boolVal;
+    break;
+    }
+}
+
+void IDList::addVar(const string name, const bool variable, const char type, const string scope)
+{
+    VarInfo info(type, variable, 0, scope);
     IDs.insert({name, info});
 }
 
-void IDList::addArrayVar(const string name, const char type, const int size)  // TO DO: CONST/VAR
+void IDList::addArrayVar(const string name, const char type, const int size, const string scope)  // TO DO: CONST/VAR
 {
-    VarInfo info(type, true, size);
+    VarInfo info(type, true, size, scope);
     IDs.insert({name, info});
 }
 
@@ -90,9 +127,9 @@ VarInfo* IDList::accessCustomField(const string name, const string field)
 }
 
 // TO DO: ARRAYS
-void IDList::addCustomVar(const string name, const string type, const CustomTypesList* cts)
+void IDList::addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList* cts)
 {
-    VarInfo info(type, true, 0, cts);
+    VarInfo info(type, variable, 0, scope, cts);
     IDs.insert({name, info});
 }
 
@@ -193,6 +230,7 @@ void IDList::printVars() const // TO DO: ALSO PRINT VALUES FOR ARRAYS & CUSTOMS
     {
         cout << "[Name: " << var.first << ", Type: ";
         var.second.printType();
+        cout << ", " << (var.second.isVariable?"Variable":"Constant");
         if(var.second.arrSize>0)
         {
             cout << ", Array size: " << var.second.arrSize << ", Values: {";
@@ -210,7 +248,7 @@ void IDList::printVars() const // TO DO: ALSO PRINT VALUES FOR ARRAYS & CUSTOMS
             cout << ", Value: ";
             var.second.printPlainVal();
         }
-        cout << "]\n";
+        cout << ", Scope: " << var.second.scope << "]\n";
     }
 }
 
