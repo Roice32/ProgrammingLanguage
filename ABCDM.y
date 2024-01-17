@@ -15,7 +15,7 @@ int nErr = 0;
 char scope[128];
 char prevScope[128];
 class IDList ids;
-class CustomTypesList cts;
+//class CustomTypesList cts;
 class FunctionsList fs;
 %}
 
@@ -59,41 +59,39 @@ progr: userDefined globalVariables globalFunctions mainProgram    { if(nErr==0)
      ;
 
 userDefined: BEGINC { strcpy(scope, "Custom Types"); } ENDC
-           | BEGINC { strcpy(scope, "Custom Types"); } userDefinedTypes ENDC
+           //| BEGINC { strcpy(scope, "Custom Types"); } userDefinedTypes ENDC
            ;
 
 // IF VARDECL WORK PROPERLY, THIS SHOULD BE DONE
-userDefinedTypes: CUSTOM ID { /*strcpy(prevScope, scope);
+userDefinedTypes: CUSTOM ID { strcpy(prevScope, scope);
                               strcat(scope, " > ");
-                              strcat(scope, $2); */} '{' contents '}' ';'    { /*if(!cts.existsCustom($2))
-                                                                                cts.addCustom($2, *$5);
+                              strcat(scope, $2); } '{' contents '}' ';'    { if(!cts.existsCustom($2))
+                                                                                cts.addCustom($2, $5);
                                                                             else
                                                                             {
                                                                                 sprintf(errmsg, "Custom-type '%s' already declared.", $2);
                                                                                 yyerror(errmsg);
                                                                             } 
-                                                                            //delete $5;
-                                                                            strcpy(scope, prevScope);*/ }
-                | userDefinedTypes CUSTOM ID { /*strcpy(prevScope, scope);
+                                                                            strcpy(scope, prevScope); }
+                | userDefinedTypes CUSTOM ID { strcpy(prevScope, scope);
                                                strcat(scope, " > ");
-                                               strcat(scope, $3); */} '{' contents '}' ';'    { /*if(!cts.existsCustom($3))
-                                                                                                  cts.addCustom($3, *$6);
+                                               strcat(scope, $3); } '{' contents '}' ';'    { if(!cts.existsCustom($3))
+                                                                                                  cts.addCustom($3, $6);
                                                                                               else
                                                                                               {
                                                                                                   sprintf(errmsg, "Custom-type '%s' already declared.", $3);
                                                                                                   yyerror(errmsg);
                                                                                               }
-                                                                                              //delete $6;
-                                                                                              strcpy(scope, prevScope);*/ }
+                                                                                              strcpy(scope, prevScope); }
                ;
 
-contents: member ';'    { /*$$ = new class IDList;
+contents: member ';'    { $$ = new class IDList;
                           if(strlen($1)>0)
                           {
                               $$->IDs.insert({$1, ids.IDs.at($1)});
                               ids.IDs.erase($1);
-                          } */} 
-        | contents member ';'    { /*$$ = $1;
+                          } } 
+        | contents member ';'    { $$ = $1;
                                    if(strlen($2)>0)
                                        if(!$$->existsVar($2))
                                        {
@@ -104,7 +102,7 @@ contents: member ';'    { /*$$ = new class IDList;
                                        {
                                            sprintf(errmsg, "Field '%s' already declared.", $2);
                                            yyerror(errmsg);
-                                       }*/ }
+                                       } }
         ;
 
 // TO DO: ALSO LET IT BE A METHOD
@@ -132,7 +130,7 @@ varDecl : variability typeUnion ID    { $$ = strdup("#Wrong#");
                                                 ids.addVar($3, ($1[0]=='v'?true:false), $2[0], scope);
                                                 $$ = strdup($3);
                                             }
-                                            else if(cts.existsCustom($2))
+                                            else if(/*cts.existsCustom($2)*/false)
                                             {
                                                 ;//ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, &cts); TO DO: IMPLEMENT DEFAULT FOR THIS
                                                 ;//$$ = stdup($3);
@@ -171,7 +169,7 @@ varDecl : variability typeUnion ID    { $$ = strdup("#Wrong#");
                                                              ids.copyValue($3, &ids.IDs.at($5));
                                                              $$ = strdup($3);
                                                          }
-                                                         else if(cts.existsCustom($2))
+                                                         else if(/*cts.existsCustom($2)*/false)
                                                          {
                                                              ;//ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, scope, &cts); TO DO: IMPLEMENT DEFAULT FOR THIS
                                                              ;//setFields
@@ -194,7 +192,7 @@ varDecl : variability typeUnion ID    { $$ = strdup("#Wrong#");
                                                         {
                                                             if(!isPlainType($2))
                                                             {
-                                                                 if(cts.existsCustom($2))
+                                                                 if(/*cts.existsCustom($2)*/false)
                                                                  {
                                                                       ;//ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, scope, &cts);
                                                                       ;// SET FIELDS
@@ -304,24 +302,6 @@ statement: varDecl
          | EVAL '(' expr ')'
          | TYPEOF '(' expr ')'
          ;
-         /*| ID ACCESS ID    { if(ids.existsVar($1)) // HERE ONLY TEMPORARILY; ALSO CHECK CUSTOM-TYPE ONLY
-                                 if(ids.IDs.find($1)->second.fields->IDs.find($3) != ids.IDs.find($1)->second.fields->IDs.end())
-                                 {
-                                     class VarInfo* r = ids.accessCustomField($1, $3); // PLACEHOLDER FOR TESTING
-                                     r->printType();
-                                     r->printPlainVal();
-                                 }
-                                 else
-                                 {
-                                     sprintf(errmsg, "Variable '%s' has no field '%s'.", $1, $3);
-                                     yyerror(errmsg);
-                                 }
-                             else
-                             {
-                                 sprintf(errmsg, "Variable '%s' not declared.", $1);
-                                 yyerror(errmsg);
-                             }
-                           }*/
 
 assignment: assignable ASSIGN expr
           ;
@@ -389,9 +369,10 @@ int main(int argc, char** argv)
 {
      yyin = fopen(argv[1],"r");
      yyparse();
+     //cout << "Custom-types:" << endl;
+     //cts.printCustoms();
      cout << "Variables:" << endl;
      ids.printVars();
-     cts.printCustoms();
 }
 // TO DO OVERALL: CONST & VAR
 //              | METHODS & FUNCTIONS

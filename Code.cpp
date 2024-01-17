@@ -51,7 +51,7 @@ VarInfo::VarInfo(const string type, const bool variable, const int size, const s
     else
         array = nullptr;
     fields = new IDList;
-    const IDList* neededFields = &cts->CustomTypes.find(type)->second;
+    const IDList* neededFields = cts->CustomTypes.find(type)->second;
     for(const auto& fld : neededFields->IDs)
         fields->addVar(fld.first, variable, fld.second.type, "Inherited (Member)");
 }
@@ -263,7 +263,7 @@ bool CustomTypesList::existsCustom(const string name) const
     return CustomTypes.find(name) != CustomTypes.end();
 }
 
-void CustomTypesList::addCustom(const string name, const IDList contents)
+void CustomTypesList::addCustom(const string name, IDList* contents)
 {
     CustomTypes.insert({name, contents});
 }
@@ -273,7 +273,7 @@ void CustomTypesList::printCustoms() const
     for(const auto &custom : CustomTypes)
     {
         cout << "\t" << custom.first << ":\n";
-        for(const auto &content : custom.second.IDs)
+        for(const auto &content : custom.second->IDs)
         {
             cout << "[Name: " << content.first << ", Type: ";
             switch(content.second.type)

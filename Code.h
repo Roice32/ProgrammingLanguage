@@ -56,10 +56,10 @@ public:
 class CustomTypesList
 {
 public:
-    unordered_map<string, IDList> CustomTypes;
+    unordered_map<string, IDList*> CustomTypes;
 
     bool existsCustom(const string name) const;
-    void addCustom(const string name, const IDList contents);
+    void addCustom(const string name, IDList* contents);
     void printCustoms() const;
     ~CustomTypesList();
 };
