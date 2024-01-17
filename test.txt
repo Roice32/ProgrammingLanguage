@@ -1,29 +1,25 @@
     beginCustoms
-Custom first { Neverchanging Int a; Changing Float b; };
-Custom third { Changing Char c; Changing String a; };
+Custom ohComeOnWorkFFS
+{
+    Changing Int stupid;
+};
     endCustoms
 
     beginGlobalVars
-Changing Int i <-- -4;
+Changing Int i;
 Changing Char c <-- 'a';
-Changing Custom first x;
-Changing Float f <-- 10.55;
-Changing String s <-- "stefan";
+Changing Float f <-- -1.24;
 Neverchanging Bool b <-- true;
-Changing Custom mom dasd;
-Changing Int iarr[6];
     endGlobalVars
 
     beginGlobalFuns
-Int f1(Int a)
-{
-    Eval(1+2);
-    TypeOf(1+a);
-}
     endGlobalFuns
 
     beginProgram
-i <-- 2;
-iarr[2] <-- x//b;
-i <-- (5+2)*3;
+Neverchanging Char x <-- 'c';
+Changing Char cClone <-- c;
+Changing Int iArr[3];
+Neverchanging Char cArr[6] <-- [ 0 ];
+Changing Float fClone <-- f;
+Changing String s <-- "abcd";
     endProgram
