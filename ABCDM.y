@@ -1,7 +1,5 @@
 %{
-#include <iostream>
-#include <vector>
-#include <string>
+#include <string.h>
 #include "Code.h"
 
 extern FILE* yyin;
@@ -14,7 +12,8 @@ void yyerror(const char* s);
 char errmsg[128];
 int nErr = 0;
 
-char scope[128] = "Global";
+char scope[128];
+char prevScope[128];
 class IDList ids;
 class CustomTypesList cts;
 class FunctionsList fs;
@@ -24,7 +23,7 @@ class FunctionsList fs;
      char* ID;
      char* typeInfo;
      char* rawValue;
-     class IDList* carryOver; // Might rename later on.
+     class IDList* fieldsList;
 }
 
 %token BEGINC ENDC BEGINGV ENDGV BEGINGF ENDGF BEGINP ENDP
@@ -33,12 +32,13 @@ class FunctionsList fs;
 %token <typeInfo> VARIABLE CONSTANT
 %type <typeInfo> typeUnion type
 %token <typeInfo> INT FLOAT CHAR STRING BOOL
+%type <ID> varDecl member
 %token <ID> ID
 %token CUSTOM ACCESS ASSIGN
 %token ADD SUB MUL DIV MOD POW
 %token EQ NEQ LEQ GEQ LESS MORE
 %token NOT AND OR
-%type <carryOver> contents member
+%type <fieldsList> contents
 %type <rawValue> value
 %token <rawValue> INT_VAL FLOAT_VAL CHAR_VAL STRING_VAL BOOL_VAL
 %token IF ELSE WHILE FOR DO
@@ -58,43 +58,57 @@ progr: userDefined globalVariables globalFunctions mainProgram    { if(nErr==0)
                                                                         printf("\tThe program is not correct: %d errors!\n", nErr); }
      ;
 
-userDefined: BEGINC { sprintf(scope, "Custom Types"); } ENDC
-           | BEGINC { sprintf(scope, "Custom Types"); } userDefinedTypes ENDC
+userDefined: BEGINC { strcpy(scope, "Custom Types"); } ENDC
+           | BEGINC { strcpy(scope, "Custom Types"); } userDefinedTypes ENDC
            ;
 
-// TO DO: INITIALIZED VALS, ARRAYS, METHODS (BASICALLY COPY FROM DECL WHEN IT'S DONE)
-userDefinedTypes: CUSTOM ID '{' contents '}' ';'    /*{ if(!cts.existsCustom($2))
-                                                          cts.addCustom($2, *$4);
-                                                      else
-                                                      {
-                                                          sprintf(errmsg, "Custom-type '%s' already declared.", $2);
-                                                          yyerror(errmsg);
-                                                      }
-                                                      delete $4; }*/
-               | userDefinedTypes CUSTOM ID '{' contents '}' ';'    /*{ if(!cts.existsCustom($3))
-                                                                         cts.addCustom($3, *$5);
-                                                                     else
-                                                                     {
-                                                                         sprintf(errmsg, "Custom-type '%s' already declared.", $3);
-                                                                         yyerror(errmsg);
-                                                                     }
-                                                                     delete $5; }*/
+// IF VARDECL WORK PROPERLY, THIS SHOULD BE DONE
+userDefinedTypes: CUSTOM ID { /*strcpy(prevScope, scope);
+                              strcat(scope, " > ");
+                              strcat(scope, $2); */} '{' contents '}' ';'    { /*if(!cts.existsCustom($2))
+                                                                                cts.addCustom($2, *$5);
+                                                                            else
+                                                                            {
+                                                                                sprintf(errmsg, "Custom-type '%s' already declared.", $2);
+                                                                                yyerror(errmsg);
+                                                                            } 
+                                                                            //delete $5;
+                                                                            strcpy(scope, prevScope);*/ }
+                | userDefinedTypes CUSTOM ID { /*strcpy(prevScope, scope);
+                                               strcat(scope, " > ");
+                                               strcat(scope, $3); */} '{' contents '}' ';'    { /*if(!cts.existsCustom($3))
+                                                                                                  cts.addCustom($3, *$6);
+                                                                                              else
+                                                                                              {
+                                                                                                  sprintf(errmsg, "Custom-type '%s' already declared.", $3);
+                                                                                                  yyerror(errmsg);
+                                                                                              }
+                                                                                              //delete $6;
+                                                                                              strcpy(scope, prevScope);*/ }
                ;
 
-contents: member ';'    /*{ $$ = new IDList;  // I AIN'T DEALING WITH NO EMPTY CLASSES
-                           $$->addVar($2, $1); } */
-        | contents member ';'    /*{ $$ = $1;
-                                    if(!$$->existsVar($3))
-                                        $$->addVar($3, $2);
-                                    else
-                                    {
-                                        sprintf(errmsg, "Field '%s' already declared.", $3);
-                                        yyerror(errmsg);
-                                    } }*/
+contents: member ';'    { /*$$ = new class IDList;
+                          if(strlen($1)>0)
+                          {
+                              $$->IDs.insert({$1, ids.IDs.at($1)});
+                              ids.IDs.erase($1);
+                          } */} 
+        | contents member ';'    { /*$$ = $1;
+                                   if(strlen($2)>0)
+                                       if(!$$->existsVar($2))
+                                       {
+                                           $$->IDs.insert({$2, ids.IDs.at($2)});
+                                           ids.IDs.erase($2);
+                                       }
+                                       else
+                                       {
+                                           sprintf(errmsg, "Field '%s' already declared.", $2);
+                                           yyerror(errmsg);
+                                       }*/ }
         ;
 
 // TO DO: ALSO LET IT BE A METHOD
-member: varDecl
+member: varDecl    { $$ = $1; }
       ;
 
 globalVariables: BEGINGV { sprintf(scope, "Global Variables"); } ENDGV
@@ -107,28 +121,37 @@ varDeclarations: varDecl ';'
 
 // TO DO: CHECK TYPE COMPATIBILITY WHERE NEEDED
 //      | CHECK SCOPE WHEN ASSIGNING
-varDecl : variability typeUnion ID    { if(!ids.existsVar($3))
-                                       {
-                                           if($1[0]=='c')
-                                           { sprintf(errmsg, "Constant identifier '%s' must be initalized.", $3);
-                                             yyerror(errmsg); }
-                                           else if(isPlainType($2))
-                                                  ids.addVar($3, ($1[0]=='v'?true:false), $2[0], scope);
-                                           else if(cts.existsCustom($2))
-                                               ;//ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, &cts); TO DO: IMPLEMENT DEFAULT FOR THIS
-                                           else
-                                           { sprintf(errmsg, "Custom-type '%s' not declared.", $2);
-                                             yyerror(errmsg); }
-                                       }
-                                       else
-                                       { sprintf(errmsg, "Redeclaration of identifier '%s'.", $2);
-                                         yyerror(errmsg); } }
-       | variability typeUnion ID ASSIGN value    { if(!ids.existsVar($3))
+varDecl : variability typeUnion ID    { $$ = strdup("#Wrong#");
+                                        if(!ids.existsVar($3))
+                                        {
+                                            if($1[0]=='c')
+                                            { sprintf(errmsg, "Constant identifier '%s' must be initalized.", $3);
+                                              yyerror(errmsg); }
+                                            else if(isPlainType($2))
+                                            {
+                                                ids.addVar($3, ($1[0]=='v'?true:false), $2[0], scope);
+                                                $$ = strdup($3);
+                                            }
+                                            else if(cts.existsCustom($2))
+                                            {
+                                                ;//ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, &cts); TO DO: IMPLEMENT DEFAULT FOR THIS
+                                                ;//$$ = stdup($3);
+                                            }
+                                            else
+                                            { sprintf(errmsg, "Custom-type '%s' not declared.", $2);
+                                              yyerror(errmsg); }
+                                        }
+                                        else
+                                        { sprintf(errmsg, "Redeclaration of identifier '%s'.", $2);
+                                          yyerror(errmsg); } }
+       | variability typeUnion ID ASSIGN value    { $$ = strdup("#Wrong#");
+                                                    if(!ids.existsVar($3))
                                                     {
                                                         if(isPlainType($2))
                                                         {
                                                             ids.addVar($3, ($1[0]=='v'?true:false), $2[0], scope);
                                                             ids.setValue($3, $5); // CHECK TYPEOF== FIRST
+                                                            $$ = strdup($3);
                                                         }
                                                         else
                                                         { sprintf(errmsg, "Custom variable '%s' cannnot be initialized with plain value.", $3);
@@ -137,7 +160,8 @@ varDecl : variability typeUnion ID    { if(!ids.existsVar($3))
                                                     else
                                                     { sprintf(errmsg, "Redeclaration of identifier '%s'.", $2);
                                                       yyerror(errmsg); } }
-       | variability typeUnion ID ASSIGN ID    { if(!ids.existsVar($3))
+       | variability typeUnion ID ASSIGN ID    { $$ = strdup("#Wrong#");
+                                                 if(!ids.existsVar($3))
                                                  {
                                                      if(ids.existsVar($5))
                                                      {
@@ -145,12 +169,14 @@ varDecl : variability typeUnion ID    { if(!ids.existsVar($3))
                                                          {
                                                              ids.addVar($3, ($1[0]=='v'?true:false), $2[0], scope);
                                                              ids.copyValue($3, &ids.IDs.at($5));
+                                                             $$ = strdup($3);
                                                          }
                                                          else if(cts.existsCustom($2))
                                                          {
                                                              ;//ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, scope, &cts); TO DO: IMPLEMENT DEFAULT FOR THIS
                                                              ;//setFields
                                                              ;// ids.copyValue($3, &ids.IDs.at($5));
+                                                             ;//$$ = strdup($3);
                                                          }
                                                          else
                                                          { sprintf(errmsg, "Custom-type '%s' not declared.", $2);
@@ -163,7 +189,8 @@ varDecl : variability typeUnion ID    { if(!ids.existsVar($3))
                                                  else
                                                  { sprintf(errmsg, "Redeclaration of identifier '%s'.", $3);
                                                    yyerror(errmsg); } }
-       | variability typeUnion ID '(' initList ')'    { if(!ids.existsVar($3))
+       | variability typeUnion ID '(' initList ')'    { $$ = strdup("#Wrong#");
+                                                        if(!ids.existsVar($3))
                                                         {
                                                             if(!isPlainType($2))
                                                             {
@@ -171,6 +198,7 @@ varDecl : variability typeUnion ID    { if(!ids.existsVar($3))
                                                                  {
                                                                       ;//ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, scope, &cts);
                                                                       ;// SET FIELDS
+                                                                      ;// $$ = strdup($3);
                                                                  }
                                                                  else
                                                                  { sprintf(errmsg, "Custom-type '%s' not declared.", $2);
@@ -183,20 +211,24 @@ varDecl : variability typeUnion ID    { if(!ids.existsVar($3))
                                                         else
                                                         { sprintf(errmsg, "Redeclaration of identifier '%s'.", $3);
                                                           yyerror(errmsg); }}
-       // ONLY WORKS FOR PLAINS FTTB
-       | variability typeUnion ID '[' value ']'    { if(!ids.existsVar($3)) // TO DO: MAKE IT TAKE EXPRESSIONS
-                                                    {
-                                                        int size; // ALSO CHECK TYPE
-                                                        sscanf($5, "%d", &size);
-                                                        if(size>0)
-                                                            ids.addArrayVar($3, ($1[0]=='v'?true:false), $2, size, scope);
-                                                        else
-                                                            yyerror("Size of array must be positive integer.");
-                                                    }
-                                                    else
-                                                    { sprintf(errmsg, "Variable '%s' already declared.", $2);
-                                                      yyerror(errmsg); } }
-       | variability typeUnion ID '[' value ']' ASSIGN '[' initList ']'    { if(!ids.existsVar($3)) // SAME THING FOR EXPRESSIONS
+       | variability typeUnion ID '[' value ']'    { $$ = strdup("#Wrong#");
+                                                     if(!ids.existsVar($3)) // TO DO: MAKE IT TAKE EXPRESSIONS
+                                                     {
+                                                         int size; // ALSO CHECK TYPE
+                                                         sscanf($5, "%d", &size);
+                                                         if(size>0)
+                                                         {
+                                                             ids.addArrayVar($3, ($1[0]=='v'?true:false), $2, size, scope);
+                                                             $$ = strdup($3);
+                                                         }
+                                                         else
+                                                             yyerror("Size of array must be positive integer.");
+                                                     }
+                                                     else
+                                                     { sprintf(errmsg, "Variable '%s' already declared.", $2);
+                                                       yyerror(errmsg); } }
+       | variability typeUnion ID '[' value ']' ASSIGN '[' initList ']'    { $$ = strdup("#Wrong#");
+                                                                             if(!ids.existsVar($3)) // SAME THING FOR EXPRESSIONS
                                                                              {
                                                                                  int size; // ALSO CHECK TYPE
                                                                                  sscanf($5, "%d", &size);
@@ -204,6 +236,7 @@ varDecl : variability typeUnion ID    { if(!ids.existsVar($3))
                                                                                  {
                                                                                      ids.addArrayVar($3, ($1[0]=='v'?true:false), $2, size, scope);
                                                                                      // INIT VALUES
+                                                                                     $$ = strdup($3);
                                                                                  }
                                                                                  else
                                                                                      yyerror("Size of array must be positive integer.");
@@ -326,7 +359,7 @@ expr: exprTerm  // HOW TO DISTINGUISH BOOL & ARITHMETIC EXPRESSIONS??
     | expr OR expr
     ;
 
-exprTerm: value
+exprTerm: value // REPLACE WITH SPECIFIC VALUES?
     | functionCall 
     | ID
     | ID ACCESS ID

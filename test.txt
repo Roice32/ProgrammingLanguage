@@ -1,4 +1,8 @@
     beginCustoms
+Custom ohComeOnWorkFFS
+{
+    Changing Int stupid;
+};
     endCustoms
 
     beginGlobalVars

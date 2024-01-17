@@ -56,89 +56,6 @@ VarInfo::VarInfo(const string type, const bool variable, const int size, const s
         fields->addVar(fld.first, variable, fld.second.type, "Inherited (Member)");
 }
 
-VarInfo::~VarInfo() // F-ER THROWS SEGMENTATION FAULT
-{
-    //if(array!=nullptr)
-    //    delete[] array;
-}
-
-void IDList::setValue(const string name, const char* value) // TO DO: CUSTOM TYPES
-{
-    VarInfo &ref = this->IDs.at(name);
-    switch(ref.type)
-    {
-    case 'i':
-        sscanf(value, "%d", &ref.intVal);
-    break;
-    case 'f':
-        sscanf(value, "%f", &ref.floatVal);
-    break;
-    case 'c':
-        ref.charVal = value[0];
-    break;
-    case 's':
-        ref.stringVal = value;
-    break;
-    case 'b':
-        ref.boolVal = (value[0]=='t'?true:false);
-    break;
-    }
-}
-
-// TO DO: MODIFY THIS TO WORK FOR ARRAYS
-void IDList::copyValue(const string name, const VarInfo *target)
-{
-    VarInfo &ref = this->IDs.at(name);
-    switch(ref.type)
-    {
-    case 'i':
-        ref.intVal = target->intVal;
-    break;
-    case 'f':
-        ref.floatVal = target->floatVal;
-    break;
-    case 'c':
-        ref.charVal = target->charVal;
-    break;
-    case 's':
-        ref.stringVal = target->stringVal;
-    break;
-    case 'b':
-        ref.boolVal = target->boolVal;
-    break;
-    }
-}
-
-void IDList::addVar(const string name, const bool variable, const char type, const string scope)
-{
-    VarInfo info(type, variable, 0, scope);
-    IDs.insert({name, info});
-}
-
-// MAKE THIS WORK FOR CUSTOMS
-void IDList::addArrayVar(const string name, const bool variable, const string type, const int size, const string scope)  // TO DO: CONST/VAR
-{
-    VarInfo info(type[0], variable, size, scope);
-    IDs.insert({name, info});
-}
-
-VarInfo* IDList::accessCustomField(const string name, const string field)
-{
-    return &IDs.find(name)->second.fields->IDs.find(field)->second;
-}
-
-// TO DO: ARRAYS
-void IDList::addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList* cts)
-{
-    VarInfo info(type, variable, 0, scope, cts);
-    IDs.insert({name, info});
-}
-
-bool IDList::existsVar(const string name) const
-{
-    return IDs.find(name) != IDs.end();
-}
-
 void VarInfo::printType() const
 {
     switch(this->type)
@@ -225,6 +142,89 @@ void VarInfo::printCustomVar() const
     }
 }
 
+VarInfo::~VarInfo() // F-ER THROWS SEGMENTATION FAULT
+{
+    //if(array!=nullptr)
+    //    delete[] array;
+}
+
+void IDList::setValue(const string name, const char* value) // TO DO: CUSTOM TYPES
+{
+    VarInfo &ref = this->IDs.at(name);
+    switch(ref.type)
+    {
+    case 'i':
+        sscanf(value, "%d", &ref.intVal);
+    break;
+    case 'f':
+        sscanf(value, "%f", &ref.floatVal);
+    break;
+    case 'c':
+        ref.charVal = value[0];
+    break;
+    case 's':
+        ref.stringVal = value;
+    break;
+    case 'b':
+        ref.boolVal = (value[0]=='t'?true:false);
+    break;
+    }
+}
+
+// TO DO: MODIFY THIS TO WORK FOR ARRAYS
+void IDList::copyValue(const string name, const VarInfo *target)
+{
+    VarInfo &ref = this->IDs.at(name);
+    switch(ref.type)
+    {
+    case 'i':
+        ref.intVal = target->intVal;
+    break;
+    case 'f':
+        ref.floatVal = target->floatVal;
+    break;
+    case 'c':
+        ref.charVal = target->charVal;
+    break;
+    case 's':
+        ref.stringVal = target->stringVal;
+    break;
+    case 'b':
+        ref.boolVal = target->boolVal;
+    break;
+    }
+}
+
+void IDList::addVar(const string name, const bool variable, const char type, const string scope)
+{
+    VarInfo info(type, variable, 0, scope);
+    IDs.insert({name, info});
+}
+
+// MAKE THIS WORK FOR CUSTOMS
+void IDList::addArrayVar(const string name, const bool variable, const string type, const int size, const string scope)  // TO DO: CONST/VAR
+{
+    VarInfo info(type[0], variable, size, scope);
+    IDs.insert({name, info});
+}
+
+VarInfo* IDList::accessCustomField(const string name, const string field)
+{
+    return &IDs.find(name)->second.fields->IDs.find(field)->second;
+}
+
+// TO DO: ARRAYS
+void IDList::addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList* cts)
+{
+    VarInfo info(type, variable, 0, scope, cts);
+    IDs.insert({name, info});
+}
+
+bool IDList::existsVar(const string name) const
+{
+    return IDs.find(name) != IDs.end();
+}
+
 void IDList::printVars() const // TO DO: ALSO PRINT VALUES FOR ARRAYS & CUSTOMS
 {
     for (const auto &var : IDs)
@@ -270,7 +270,6 @@ void CustomTypesList::addCustom(const string name, const IDList contents)
 
 void CustomTypesList::printCustoms() const
 {
-    cout << "Custom Types:\n";
     for(const auto &custom : CustomTypes)
     {
         cout << "\t" << custom.first << ":\n";

@@ -76,3 +76,18 @@ class FunctionsList
 public:
     unordered_map<string, FunInfo> Funs;
 };
+
+class ASTNode
+{
+public:
+    string type;
+    string rawValue;
+    class ASTNode* left;
+    class ASTNode* right;
+};
+
+class ASTree
+{
+public:
+    class ASTNode* root;
+};
