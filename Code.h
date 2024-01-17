@@ -81,13 +81,13 @@ class ASTNode
 {
 public:
     string type;
+    bool typeComputed;
     string rawValue;
     class ASTNode* left;
     class ASTNode* right;
-};
-
-class ASTree
-{
-public:
-    class ASTNode* root;
+    ASTNode(const char* type, const char* rawValue);
+    ASTNode(const VarInfo& ref);
+    const char* computeType();
+    void printTree() const;
+    void destroyTree();
 };

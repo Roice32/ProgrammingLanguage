@@ -302,3 +302,102 @@ CustomTypesList::~CustomTypesList()
 {
     CustomTypes.clear();
 }
+
+ASTNode::ASTNode(const char* type, const char* rawValue)
+{
+    this->type = type;
+    this->typeComputed = false;
+    this->rawValue = rawValue;
+    this->left = this->right = nullptr;
+}
+
+ASTNode::ASTNode(const VarInfo &ref)
+{
+    this->typeComputed = false;
+    if(ref.type=='u')
+    {
+        this->type = ref.customType;
+        this->rawValue = "!Custom!";
+    }
+    else
+    {
+        this->type = ref.type;
+        if(ref.type=='s')
+            this->rawValue == ref.stringVal;
+        else
+        {
+            char val[64];
+            switch (ref.type)
+            {
+            case 'i': sprintf(val, "%d", ref.intVal); break;
+            case 'f': sprintf(val, "%f", ref.floatVal); break;
+            case 'c': sprintf(val, "%c", ref.charVal); break;
+            case 'b': sprintf(val, "%s", ref.boolVal?"true":"false");
+            }
+            this->rawValue = val;
+        }
+    }
+    this->left = this->right = nullptr;
+}
+
+const char* ASTNode::computeType()
+{
+    this->typeComputed = true;
+    if(this->left==nullptr && this->right==nullptr)
+        return this->type.c_str();
+    string rhs = this->right->computeType();
+    if(rhs=="!nE!")
+    {
+        this->type = "!nE!";
+        return this->type.c_str();
+    }
+    if(this->rawValue=="!")
+    {   if(rhs=="b")
+            this->type = "b";
+        else
+            this->type = "!bMM!";
+        return this->type.c_str();
+    }
+    string lhs = this->left->computeType();
+    if(lhs=="!nE!")
+    {
+        this->type = "!nE!";
+        return this->type.c_str();
+    }
+    if(lhs!=rhs)
+    {
+        this->type = "!tMM!";
+        return this->type.c_str();
+    }
+    if(this->type=="!bOp!")
+    {
+        if(lhs=="b")
+            this->type = "b";
+        else
+            this->type = "!bMM!";
+    }
+    if(this->type=="!rOp!")
+    {
+        if(lhs=="i" || lhs=="f")
+            this->type = "b";
+        else
+            this->type = "!rMM!";
+    }
+    if(this->type=="!aOp!")
+    {
+        if(lhs=="i" || rhs=="f")
+            this->type = lhs;
+        else
+            this->type = "!aMM!";
+    }
+    return this->type.c_str();
+}
+
+void ASTNode::destroyTree()
+{
+    if(this->left!=nullptr)
+        this->left->destroyTree();
+    if(this->right!=nullptr)
+        this->right->destroyTree();
+    delete this;
+}

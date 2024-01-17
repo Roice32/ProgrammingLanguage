@@ -16,6 +16,25 @@ Neverchanging Char x <-- 'c';
 Changing Char cClone <-- c;
 Changing Int iArr[3];
 Neverchanging Char cArr[6] <-- [ 0 ];
+LoopWhile (5)
+{
+    Changing Char w <-- 'w';
+    If (a)
+    {
+        Neverchanging String innerS <-- "some text";
+    }
+    Otherwise
+    {
+        Changing Bool bbb <-- false;
+    };
+};
 Changing Float fClone <-- f;
+TypeOf(7);
+TypeOf(fClone + 2.55);
+TypeOf(b);
+TypeOf(!b);
+TypeOf(b&&(2<5));
+TypeOf(b||(5+2.2));
+TypeOf(w&&true);
 Changing String s <-- "abcd";
     endProgram
