@@ -13,13 +13,19 @@ Neverchanging Bool b <-- true;
 
     beginProgram
 Neverchanging Char x <-- 'c';
+Eval(c);
+Eval(2^^2);
 Changing Char cClone <-- c;
+Eval((2.5*3.0)/4.0);
+Eval(((2+2)<=5)&&(!(2.2<1.0)));
 Changing Int iArr[3];
 Neverchanging Char cArr[6] <-- [ 0 ];
+TypeOf((2+2)<(3+3));
+TypeOf(true&&false);
 LoopWhile (5)
 {
     Changing Char w <-- 'w';
-    If (a)
+    If ((2+2)<(3+'a'))
     {
         Neverchanging String innerS <-- "some text";
     }
@@ -29,12 +35,7 @@ LoopWhile (5)
     };
 };
 Changing Float fClone <-- f;
-TypeOf(7);
-TypeOf(fClone + 2.55);
-TypeOf(b);
-TypeOf(!b);
-TypeOf(b&&(2<5));
-TypeOf(b||(5+2.2));
-TypeOf(w&&true);
+TypeOf(2 < 5);
+TypeOf(2^^2.5);
 Changing String s <-- "abcd";
     endProgram

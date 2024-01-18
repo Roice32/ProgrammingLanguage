@@ -87,7 +87,10 @@ public:
     class ASTNode* right;
     ASTNode(const char* type, const char* rawValue);
     ASTNode(const VarInfo& ref);
-    const char* computeType();
+    const char* computeType(bool& triggerErr);
+    int computeIntVal(bool& triggerErr);
+    float computeFloatVal(bool& triggerErr);
+    bool computeBoolVal(bool& triggerErr);
     void printTree() const;
     void destroyTree();
 };

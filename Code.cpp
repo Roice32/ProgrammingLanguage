@@ -1,3 +1,4 @@
+#include <cmath>
 #include "Code.h"
 
 bool isPlainType(const char* type)
@@ -340,12 +341,14 @@ ASTNode::ASTNode(const VarInfo &ref)
     this->left = this->right = nullptr;
 }
 
-const char* ASTNode::computeType()
+const char* ASTNode::computeType(bool& triggerErr)
 {
+    if(this->typeComputed==true)
+        return this->type.c_str();
     this->typeComputed = true;
     if(this->left==nullptr && this->right==nullptr)
         return this->type.c_str();
-    string rhs = this->right->computeType();
+    string rhs = this->right->computeType(triggerErr);
     if(rhs=="!nE!")
     {
         this->type = "!nE!";
@@ -355,10 +358,13 @@ const char* ASTNode::computeType()
     {   if(rhs=="b")
             this->type = "b";
         else
+        {
             this->type = "!bMM!";
+            triggerErr = true;
+        }
         return this->type.c_str();
     }
-    string lhs = this->left->computeType();
+    string lhs = this->left->computeType(triggerErr);
     if(lhs=="!nE!")
     {
         this->type = "!nE!";
@@ -367,6 +373,7 @@ const char* ASTNode::computeType()
     if(lhs!=rhs)
     {
         this->type = "!tMM!";
+        triggerErr = true;
         return this->type.c_str();
     }
     if(this->type=="!bOp!")
@@ -374,23 +381,177 @@ const char* ASTNode::computeType()
         if(lhs=="b")
             this->type = "b";
         else
+        {
             this->type = "!bMM!";
+            triggerErr = true;
+        }
     }
     if(this->type=="!rOp!")
     {
         if(lhs=="i" || lhs=="f")
             this->type = "b";
         else
+        {
             this->type = "!rMM!";
+            triggerErr = true;
+        }
     }
     if(this->type=="!aOp!")
     {
         if(lhs=="i" || rhs=="f")
             this->type = lhs;
         else
+        {
             this->type = "!aMM!";
+            triggerErr = true;
+        }
     }
     return this->type.c_str();
+}
+
+int ASTNode::computeIntVal(bool& triggerErr)
+{
+    if(this->left==nullptr)
+    {
+        int result;
+        sscanf(this->rawValue.c_str(), "%d", &result);
+        return result;
+    }
+    int lhs = this->left->computeIntVal(triggerErr);
+    int rhs = this->right->computeIntVal(triggerErr);
+    if(triggerErr)
+        return 0;
+
+    if(this->rawValue == "+")
+        return lhs + rhs;
+    if(this->rawValue == "-")
+        return lhs - rhs;
+    if(this->rawValue == "/")
+        if(rhs==0)
+        {
+            triggerErr = true;
+            return 0;
+        }
+        else
+            return lhs / rhs;
+    if(this->rawValue == "%")
+        if(rhs==0)
+        {
+            triggerErr = true;
+            return 0;
+        }
+        else
+            return lhs % rhs;
+    if(rhs<0)
+    {
+        triggerErr = true;
+        return 0;
+    }
+    int result = 1;
+    for(int i = 0; i < rhs; i++)
+        result *= lhs;
+    return result;
+}
+
+float ASTNode::computeFloatVal(bool& triggerErr)
+{
+    if(this->left==nullptr)
+    {
+        float result;
+        sscanf(this->rawValue.c_str(), "%f", &result);
+        return result;
+    }
+    float lhs = this->left->computeFloatVal(triggerErr);
+    float rhs = this->right->computeFloatVal(triggerErr);
+    if(triggerErr)
+        return 0;
+
+    if(this->rawValue == "+")
+        return lhs + rhs;
+    if(this->rawValue == "-")
+        return lhs - rhs;
+    if(this->rawValue == "*")
+        return lhs * rhs;
+    if(this->rawValue == "/")
+        if(rhs==0)
+        {
+            triggerErr = true;
+            return 0;
+        }
+        else
+            return lhs / rhs;
+    if(this->rawValue == "%")
+    {
+        triggerErr = true;
+        return 0;
+    }
+    return pow(lhs, rhs);
+}
+
+bool ASTNode::computeBoolVal(bool& triggerErr)
+{
+    if(this->type=="!bOp!")
+        if(this->rawValue[0]=='!')
+        {
+            bool res = this->right->computeBoolVal(triggerErr);
+            if(triggerErr)
+                return false;
+            return !res;
+        }
+        if(this->rawValue[0]=='&')
+        {
+            bool lhs = this->left->computeBoolVal(triggerErr);
+            bool rhs = this->right->computeBoolVal(triggerErr);
+            if(triggerErr)
+                return false;
+            return lhs && rhs;
+        }
+        if(this->rawValue[0]=='|')
+        {
+            bool lhs = this->left->computeBoolVal(triggerErr);
+            bool rhs = this->right->computeBoolVal(triggerErr);
+            if(triggerErr)
+                return false;
+            return lhs || rhs;
+        }
+    if(this->type=="!rOp!")
+        if(this->left->type[0]=='i')
+        {
+            int lhs = this->left->computeIntVal(triggerErr);
+            int rhs = this->right->computeIntVal(triggerErr);
+            if(triggerErr)
+                return false;
+            if(this->rawValue == "==")
+                return lhs==rhs;
+            if(this->rawValue == "=/=")
+                return lhs!=rhs;
+            if(this->rawValue == "<=")
+                return lhs<=rhs;
+            if(this->rawValue == "=>")
+                return lhs>=rhs;
+            if(this->rawValue == "<")
+                return lhs<rhs;
+            return lhs>rhs;
+        }
+        else
+        {
+            float lhs = this->left->computeFloatVal(triggerErr);
+            float rhs = this->right->computeFloatVal(triggerErr);
+            if(triggerErr)
+                return false;
+            if(this->rawValue == "==")
+                return lhs==rhs;
+            if(this->rawValue == "=/=")
+                return lhs!=rhs;
+            if(this->rawValue == "<=")
+                return lhs<=rhs;
+            if(this->rawValue == "=>")
+                return lhs>=rhs;
+            if(this->rawValue == "<")
+                return lhs<rhs;
+            return lhs>rhs;
+        }
+    return false; // Here only to (safely) supress a warning.
 }
 
 void ASTNode::destroyTree()
@@ -401,3 +562,4 @@ void ASTNode::destroyTree()
         this->right->destroyTree();
     delete this;
 }
+

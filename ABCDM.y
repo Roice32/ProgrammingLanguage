@@ -8,9 +8,12 @@ extern int yylineno;
 extern int yylex();
 
 void yyerror(const char* s);
+void ASTErrThrow(const char* type, const char* op);
 
 char errmsg[128];
 int nErr = 0;
+bool ASTErr;
+bool prevErr;
 
 char scope[256];
 char prevScope[256];
@@ -295,16 +298,69 @@ statement: varDecl
          | functionCall
          | assignment
          | ID ACCESS functionCall
-         | IF '(' expr ')' { strcpy(prevScope, scope);
-                             snprintf(scope, 256, "%s > If(L%d)", prevScope, yylineno); } '{' block '}' ELSE { snprintf(scope, 256, "%s > Otherwise(L%d)", prevScope, yylineno); } '{' block '}'
+         | IF { ASTErr = prevErr = false; }
+           '(' expr ')' { const char* exprType = $4->computeType(ASTErr);
+                          if(!ASTErr && (exprType[0]!='b' || strlen(exprType)>1))
+                          {
+                              sprintf(errmsg, "'If' condition must be of 'Bool' type.");
+                              yyerror(errmsg);
+                          }
+                          strcpy(prevScope, scope);
+                          snprintf(scope, 256, "%s > If(L%d)", prevScope, yylineno); }
+           '{' block '}' ELSE { snprintf(scope, 256, "%s > Otherwise(L%d)", prevScope, yylineno); }
+           '{' block '}'
          | WHILE '(' expr ')' { strcpy(prevScope, scope);
                                 snprintf(scope, 256, "%s > LoopWhile(L%d)", prevScope, yylineno); } '{' block '}'
+         //        V SHOULD THIS RATHER BE A DECLARATION?
          | FOR '(' assignment ';' expr ';' assignment ')' { strcpy(prevScope, scope);
                                                             snprintf(scope, 256, "%s > For(L%d)", prevScope, yylineno); } DO '{' block '}' // MIGHT NEED MODIFYING
-         | EVAL '(' expr ')'
-         | TYPEOF '(' expr ')'    { const char* exprType = $3->computeType();
-                                    printf("TypeOf expression at line %d: %s.\n", yylineno, exprType);
-                                    $3->destroyTree(); }
+         | EVAL { ASTErr = false; } '(' expr ')'    { const char* exprType = $4->computeType(ASTErr);
+                                                      if(!ASTErr)
+                                                      {
+                                                          if(strlen(exprType)>1 || !(exprType[0]=='i' || exprType[0]=='f' || exprType[0]=='b'))
+                                                          {
+                                                              sprintf(errmsg, "Eval: Cannot compute value of expression that is not of type Int, Float, or Bool.");
+                                                              yyerror(errmsg);
+                                                          }
+                                                          else
+                                                          {
+                                                              ASTErr = false;
+                                                              if(exprType[0]=='i')
+                                                              {
+                                                                  int res = $4->computeIntVal(ASTErr);
+                                                                  if(!ASTErr)
+                                                                      printf("Value of 'Int' expression at line %d: %d.\n", yylineno, res);
+                                                                  else
+                                                                      yyerror("Eval concluded NaN (either division by zero or negative exponent).");
+                                                              } else if(exprType[0]=='f')
+                                                              { 
+                                                                  float res = $4->computeFloatVal(ASTErr);
+                                                                  if(!ASTErr)
+                                                                      printf("Value of 'Float' expression at line %d: %f.\n", yylineno, res);
+                                                                  else
+                                                                      yyerror("Eval concluded NaN (either division by zero or attempt of unsupported '%').");
+                                                              } else
+                                                              {
+                                                                  bool res = $4->computeBoolVal(ASTErr);
+                                                                  if(!ASTErr)
+                                                                      printf("Value of 'Bool' expression at line %d: %s.\n", yylineno, res?"true":"false");
+                                                                  else
+                                                                      yyerror("Eval concluded Maybe (sub-expression evaluated to NaN).");
+                                                              } } } }
+         | TYPEOF { ASTErr = prevErr = false; } '(' expr ')'    { const char* exprType = $4->computeType(ASTErr);
+                                                                  if(!ASTErr)
+                                                                      if(strlen(exprType)==1)
+                                                                          switch(exprType[0])
+                                                                          {
+                                                                          case 'i': printf("TypeOf expression at line %d: Int.\n", yylineno); break;
+                                                                          case 'f': printf("TypeOf expression at line %d: Float.\n", yylineno); break;
+                                                                          case 'c': printf("TypeOf expression at line %d: Char.\n", yylineno); break;
+                                                                          case 's': printf("TypeOf expression at line %d: String.\n", yylineno); break;
+                                                                          case 'b': printf("TypeOf expression at line %d: Bool.\n", yylineno); break;
+                                                                          }
+                                                                      else
+                                                                          printf("TypeOf expression at line %d: Custom (%s).\n", yylineno, exprType);
+                                                                  $4->destroyTree(); }
          ;
 
 assignment: assignable ASSIGN expr
@@ -323,22 +379,67 @@ argList: expr
        | argList ',' expr
        ;
 
-expr: '(' expr ')'    { $$ = $2; }
-    | NOT expr    { $$ = new class ASTNode("!bOp!", "!"); $$->right = $2; }
-    | expr AND expr    { $$ = new class ASTNode("!bOp!", "&&"); $$->left = $1; $$->right = $3; }
-    | expr OR expr    { $$ = new class ASTNode("!bOp!", "||"); $$->left = $1; $$->right = $3; }
-    | expr EQ expr    { $$ = new class ASTNode("!rOP!", "=="); $$->left = $1; $$->right = $3; }
-    | expr NEQ expr    { $$ = new class ASTNode("!rOP!", "=/="); $$->left = $1; $$->right = $3; }
-    | expr LEQ expr    { $$ = new class ASTNode("!rOP!", "<="); $$->left = $1; $$->right = $3; }
-    | expr GEQ expr    { $$ = new class ASTNode("!rOP!", "=>"); $$->left = $1; $$->right = $3; }
-    | expr LESS expr    { $$ = new class ASTNode("!rOP!", "<"); $$->left = $1; $$->right = $3; }
-    | expr MORE expr    { $$ = new class ASTNode("!rOP!", ">"); $$->left = $1; $$->right = $3; }
-    | expr ADD expr    { $$ = new class ASTNode("!aOp!", "+"); $$->left = $1; $$->right = $3; }
-    | expr SUB expr    { $$ = new class ASTNode("!aOp!", "-"); $$->left = $1; $$->right = $3; }
-    | expr MUL expr    { $$ = new class ASTNode("!aOp!", "*"); $$->left = $1; $$->right = $3; }
-    | expr DIV expr    { $$ = new class ASTNode("!aOp!", "/"); $$->left = $1; $$->right = $3; }
-    | expr MOD expr    { $$ = new class ASTNode("!aOp!", "%"); $$->left = $1; $$->right = $3; }
-    | expr POW expr    { $$ = new class ASTNode("!aOp!", "^^"); $$->left = $1; $$->right = $3; }
+expr: '(' expr ')'    { $$ = $2; $$->computeType(ASTErr); }
+    | NOT expr    { $$ = new class ASTNode("!bOp!", "!"); $$->right = $2;
+                    const char* res = $$->computeType(ASTErr);
+                    if(ASTErr!=prevErr) ASTErrThrow(res, "!");
+                    prevErr = ASTErr; }
+    | expr AND expr    { $$ = new class ASTNode("!bOp!", "&&"); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "&&");
+                         prevErr = ASTErr; }
+    | expr OR expr    { $$ = new class ASTNode("!bOp!", "||"); $$->left = $1; $$->right = $3;
+                        const char* res = $$->computeType(ASTErr);
+                        if(ASTErr!=prevErr) ASTErrThrow(res, "||");
+                        prevErr = ASTErr; }
+    | expr EQ expr    { $$ = new class ASTNode("!rOp!", "=="); $$->left = $1; $$->right = $3;
+                        const char* res = $$->computeType(ASTErr);
+                        if(ASTErr!=prevErr) ASTErrThrow(res, "==");
+                        prevErr = ASTErr; }
+    | expr NEQ expr    { $$ = new class ASTNode("!rOp!", "=/="); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "=/=");
+                         prevErr = ASTErr; }
+    | expr LEQ expr    { $$ = new class ASTNode("!rOp!", "<="); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "<=");
+                         prevErr = ASTErr; }
+    | expr GEQ expr    { $$ = new class ASTNode("!rOp!", "=>"); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "=>");
+                         prevErr = ASTErr; }
+    | expr LESS expr    { $$ = new class ASTNode("!rOp!", "<"); $$->left = $1; $$->right = $3;
+                          const char* res = $$->computeType(ASTErr);
+                          if(ASTErr!=prevErr) ASTErrThrow(res, "<");
+                          prevErr = ASTErr; }
+    | expr MORE expr    { $$ = new class ASTNode("!rOp!", ">"); $$->left = $1; $$->right = $3;
+                          const char* res = $$->computeType(ASTErr);
+                          if(ASTErr!=prevErr) ASTErrThrow(res, ">");
+                          prevErr = ASTErr; }
+    | expr ADD expr    { $$ = new class ASTNode("!aOp!", "+"); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "+");
+                         prevErr = ASTErr; }
+    | expr SUB expr    { $$ = new class ASTNode("!aOp!", "-"); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "-");
+                         prevErr = ASTErr; }
+    | expr MUL expr    { $$ = new class ASTNode("!aOp!", "*"); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "*");
+                         prevErr = ASTErr; }
+    | expr DIV expr    { $$ = new class ASTNode("!aOp!", "/"); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "/");
+                         prevErr = ASTErr; }
+    | expr MOD expr    { $$ = new class ASTNode("!aOp!", "%"); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "%");
+                         prevErr = ASTErr; }
+    | expr POW expr    { $$ = new class ASTNode("!aOp!", "^^"); $$->left = $1; $$->right = $3;
+                         const char* res = $$->computeType(ASTErr);
+                         if(ASTErr!=prevErr) ASTErrThrow(res, "^^");
+                         prevErr = ASTErr; }
     | ID    { if(ids.existsVar($1))
               {
                 class VarInfo& data = ids.IDs[$1];
@@ -349,15 +450,16 @@ expr: '(' expr ')'    { $$ = $2; }
                 sprintf(errmsg, "Use of identifier not declared in this scope: '%s'.", $1);
                 yyerror(errmsg);
                 $$ = new class ASTNode("!nE!", "");
+                ASTErr = prevErr = true;
               } }
     //| functionCall // TO DO
     //| ID ACCESS ID // ONLY IF CLASSES
     //| ID ACCESS functionCall // ONLY IF CLASSES
-    | INT_VAL    { $$ = new class ASTNode("i", $1); }
-    | FLOAT_VAL    { $$ = new class ASTNode("f", $1); }
-    | CHAR_VAL    { $$ = new class ASTNode("c", $1); }
-    | STRING_VAL    { $$ = new class ASTNode("s", $1); }
-    | BOOL_VAL    { $$ = new class ASTNode("b", $1); }
+    | INT_VAL    { $$ = new class ASTNode("i", $1); $$->typeComputed = true; }
+    | FLOAT_VAL    { $$ = new class ASTNode("f", $1); $$->typeComputed = true; }
+    | CHAR_VAL    { $$ = new class ASTNode("c", $1); $$->typeComputed = true; }
+    | STRING_VAL    { $$ = new class ASTNode("s", $1); $$->typeComputed = true; }
+    | BOOL_VAL    { $$ = new class ASTNode("b", $1); $$->typeComputed = true; }
     ;
 
 type: INT    { $$ = $1; }
@@ -379,6 +481,18 @@ value: INT_VAL    { $$ = $1; }
 void yyerror(const char* s)
 { printf("Error: \"%s\"\n\tAt line: %d.\n",s,yylineno); ++nErr; }
 
+void ASTErrThrow(const char* type, const char* op)
+{
+    switch(type[1])
+    {
+    case 'b': sprintf(errmsg, "TypeOf: Operator '%s' expected operand%s of type 'bool'.", op, op[0]=='!'?"":"s"); break;
+    case 't': sprintf(errmsg, "TypeOf: Operator '%s' expected operands of same type.", op); break;
+    case 'r':
+    case 'a': sprintf(errmsg, "TypeOf: Operator '%s' expected operands of type 'Int' or 'Float'.", op); break;
+    }
+    yyerror(errmsg);
+}
+
 int main(int argc, char** argv)
 {
      yyin = fopen(argv[1],"r");
@@ -389,8 +503,9 @@ int main(int argc, char** argv)
      ids.printVars();
 }
 // CLASSES MIGHT WORK WITH [KEY] INSTEAD OF .AT(KEY)
-// TO DO OVERALL: CONST & VAR
+// TO DO OVERALL: ENSURE CONSTS CANNOT BE MODIFIED
 //              | METHODS & FUNCTIONS
-//              | EVAL & TYPEOF
+//              | THAT RANDOM ERROR AT EVAL?
 //              | NO FUNCTIONS & CLASSES DEFINITIONS IN MAIN
 //              | COMMENTS?
+//              | MAKE SURE THE MATHS IS MATH-ING CORRECTLY
