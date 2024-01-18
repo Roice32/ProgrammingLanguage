@@ -6,6 +6,8 @@ using namespace std;
 
 bool isPlainType(const char *type);
 
+const char* prettyExprType(const char* type);
+
 class VarInfo
 {
 public:

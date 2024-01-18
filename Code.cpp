@@ -1,9 +1,26 @@
 #include <cmath>
 #include "Code.h"
 
-bool isPlainType(const char* type)
+bool isPlainType(const char *type)
 {
-    return type[1]=='\0' && (type[0]=='i' || type[0]=='f' || type[0]=='c' || type[0]=='s' || type[0]=='b');
+    return type[1] == '\0' && (type[0] == 'i' || type[0] == 'f' || type[0] == 'c' || type[0] == 's' || type[0] == 'b');
+}
+
+const char* prettyExprType(const char *type)
+{
+    if (type[1]=='\0')
+        switch (type[0])
+        {
+        case 'i': return "Int"; break;
+        case 'f': return "Float"; break;
+        case 'c': return "Char"; break;
+        case 's': return "String"; break;
+        case 'b': return "Bool"; break;
+        }
+    char temp[64];
+    sprintf(temp, "Custom (%s)", type);
+    const char* custom = temp;
+    return custom;
 }
 
 VarInfo::VarInfo()
@@ -28,10 +45,10 @@ VarInfo::VarInfo(const char type, const bool variable, const int size, const str
     this->isVariable = variable;
     this->scope = scope;
     this->arrSize = size;
-    if(this->arrSize>0)
+    if (this->arrSize > 0)
     {
         this->array = new VarInfo[arrSize];
-        for(int i=0; i < arrSize; i++)
+        for (int i = 0; i < arrSize; i++)
             this->array[i].type = this->type;
     }
     else
@@ -40,135 +57,135 @@ VarInfo::VarInfo(const char type, const bool variable, const int size, const str
 }
 
 // LORD KNOWS HOW TO MODIFY THIS LATER
-VarInfo::VarInfo(const string type, const bool variable, const int size, const string scope, const CustomTypesList* cts)
+VarInfo::VarInfo(const string type, const bool variable, const int size, const string scope, const CustomTypesList *cts)
 {
     this->type = 'u';
     this->customType = type;
     this->isVariable = variable;
     this->scope = scope;
     this->arrSize = size;
-    if(arrSize>0)
+    if (arrSize > 0)
         array = new VarInfo[arrSize];
     else
         array = nullptr;
     fields = new IDList;
-    const IDList* neededFields = cts->CustomTypes.find(type)->second;
-    for(const auto& fld : neededFields->IDs)
+    const IDList *neededFields = cts->CustomTypes.find(type)->second;
+    for (const auto &fld : neededFields->IDs)
         fields->addVar(fld.first, variable, fld.second.type, "Inherited (Member)");
 }
 
 void VarInfo::printType() const
 {
-    switch(this->type)
+    switch (this->type)
     {
     case 'i':
         cout << "Int";
-    break;
+        break;
     case 'f':
         cout << "Float";
-    break;
+        break;
     case 'c':
         cout << "Char";
-    break;
+        break;
     case 's':
         cout << "String";
-    break;
+        break;
     case 'b':
         cout << "Bool";
-    break;
+        break;
     case 'u':
         cout << "Custom (" << this->customType << ")";
-    break;
+        break;
     }
 }
 
 void VarInfo::printPlainVal() const
 {
-    switch(type)
+    switch (type)
     {
     case 'i':
         cout << this->intVal;
-    break;
+        break;
     case 'f':
         cout << this->floatVal;
-    break;
+        break;
     case 'c':
         cout << '\'' << this->charVal << '\'';
-    break;
+        break;
     case 's':
         cout << '\"' << this->stringVal << '\"';
-    break;
+        break;
     case 'b':
-        cout << (this->boolVal==true?"true":"false");
-    break;
+        cout << (this->boolVal == true ? "true" : "false");
+        break;
     }
 }
 
 void VarInfo::printArray() const
 {
-    for(int i=0; i<arrSize; i++)
+    for (int i = 0; i < arrSize; i++)
     {
         array[i].printPlainVal();
-        if(i<arrSize-1)
+        if (i < arrSize - 1)
             cout << "|";
     }
 }
 
 void VarInfo::printCustomVar() const
 {
-    for(auto const &fld: fields->IDs)
+    for (auto const &fld : fields->IDs)
     {
         cout << "[Name: " << fld.first;
-        if(fld.second.arrSize>0)
+        if (fld.second.arrSize > 0)
             cout << ", Array size: " << fld.second.arrSize;
         cout << ", Type: ";
-        switch(fld.second.type)
+        switch (fld.second.type)
         {
         case 'i':
             cout << "Int, Value: " << fld.second.intVal << "] ";
-        break;
+            break;
         case 'f':
             cout << "Float, Value: " << fld.second.floatVal << "] ";
-        break;
+            break;
         case 'c':
             cout << "Char, Value: " << fld.second.charVal << "] ";
-        break;
+            break;
         case 's':
-                cout << "String, Value: \"" << fld.second.stringVal << "\"] ";
-        break;
+            cout << "String, Value: \"" << fld.second.stringVal << "\"] ";
+            break;
         case 'b':
-            cout << "Bool, Value: " << (fld.second.boolVal==true?"true":"false") << "] ";
-        break;
+            cout << "Bool, Value: " << (fld.second.boolVal == true ? "true" : "false") << "] ";
+            break;
         }
     }
 }
 
-VarInfo::~VarInfo() // F-ER THROWS SEGMENTATION FAULT
+VarInfo::~VarInfo() // THROWS SEGMENTATION FAULT
 {
-    //if(array!=nullptr)
-    //    delete[] array;
+    // if(array!=nullptr)
+    //     delete[] array;
 }
 
-void IDList::setValue(const string name, const char* value) // TO DO: CUSTOM TYPES
+void IDList::setValue(const string name, const char *value) // TO DO: CUSTOM TYPES
 {
     VarInfo &ref = this->IDs.at(name);
-    switch(ref.type)
+    switch (ref.type)
     {
     case 'i':
         sscanf(value, "%d", &ref.intVal);
-    break;
+        break;
     case 'f':
         sscanf(value, "%f", &ref.floatVal);
-    break;
+        break;
     case 'c':
         ref.charVal = value[0];
-    break;
+        break;
     case 's':
         ref.stringVal = value;
-    break;
+        break;
     case 'b':
-        ref.boolVal = (value[0]=='t'?true:false);
-    break;
+        ref.boolVal = (value[0] == 't' ? true : false);
+        break;
     }
 }
 
@@ -176,23 +193,23 @@ void IDList::setValue(const string name, const char* value) // TO DO: CUSTOM TYP
 void IDList::copyValue(const string name, const VarInfo *target)
 {
     VarInfo &ref = this->IDs.at(name);
-    switch(ref.type)
+    switch (ref.type)
     {
     case 'i':
         ref.intVal = target->intVal;
-    break;
+        break;
     case 'f':
         ref.floatVal = target->floatVal;
-    break;
+        break;
     case 'c':
         ref.charVal = target->charVal;
-    break;
+        break;
     case 's':
         ref.stringVal = target->stringVal;
-    break;
+        break;
     case 'b':
         ref.boolVal = target->boolVal;
-    break;
+        break;
     }
 }
 
@@ -203,19 +220,19 @@ void IDList::addVar(const string name, const bool variable, const char type, con
 }
 
 // MAKE THIS WORK FOR CUSTOMS
-void IDList::addArrayVar(const string name, const bool variable, const string type, const int size, const string scope)  // TO DO: CONST/VAR
+void IDList::addArrayVar(const string name, const bool variable, const string type, const int size, const string scope) // TO DO: CONST/VAR
 {
     VarInfo info(type[0], variable, size, scope);
     IDs.insert({name, info});
 }
 
-VarInfo* IDList::accessCustomField(const string name, const string field)
+VarInfo *IDList::accessCustomField(const string name, const string field)
 {
     return &IDs.find(name)->second.fields->IDs.find(field)->second;
 }
 
 // TO DO: ARRAYS
-void IDList::addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList* cts)
+void IDList::addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList *cts)
 {
     VarInfo info(type, variable, 0, scope, cts);
     IDs.insert({name, info});
@@ -232,14 +249,14 @@ void IDList::printVars() const // TO DO: ALSO PRINT VALUES FOR ARRAYS & CUSTOMS
     {
         cout << "[Name: " << var.first << ", Type: ";
         var.second.printType();
-        cout << ", " << (var.second.isVariable?"Variable":"Constant");
-        if(var.second.arrSize>0)
+        cout << ", " << (var.second.isVariable ? "Variable" : "Constant");
+        if (var.second.arrSize > 0)
         {
             cout << ", Array size: " << var.second.arrSize << ", Values: {";
             var.second.printArray();
             cout << "}";
         }
-        else if(var.second.type=='u')
+        else if (var.second.type == 'u')
         {
             cout << ", Fields: { ";
             var.second.printCustomVar();
@@ -264,36 +281,36 @@ bool CustomTypesList::existsCustom(const string name) const
     return CustomTypes.find(name) != CustomTypes.end();
 }
 
-void CustomTypesList::addCustom(const string name, IDList* contents)
+void CustomTypesList::addCustom(const string name, IDList *contents)
 {
     CustomTypes.insert({name, contents});
 }
 
 void CustomTypesList::printCustoms() const
 {
-    for(const auto &custom : CustomTypes)
+    for (const auto &custom : CustomTypes)
     {
         cout << "\t" << custom.first << ":\n";
-        for(const auto &content : custom.second->IDs)
+        for (const auto &content : custom.second->IDs)
         {
             cout << "[Name: " << content.first << ", Type: ";
-            switch(content.second.type)
+            switch (content.second.type)
             {
             case 'i':
                 cout << "Int]\n";
-            break;
+                break;
             case 'f':
                 cout << "Float]\n";
-            break;
+                break;
             case 'c':
                 cout << "Char]\n";
-            break;
+                break;
             case 's':
                 cout << "String]\n";
-            break;
+                break;
             case 'b':
                 cout << "Bool]\n";
-            break;
+                break;
             }
         }
     }
@@ -304,7 +321,7 @@ CustomTypesList::~CustomTypesList()
     CustomTypes.clear();
 }
 
-ASTNode::ASTNode(const char* type, const char* rawValue)
+ASTNode::ASTNode(const char *type, const char *rawValue)
 {
     this->type = type;
     this->typeComputed = false;
@@ -315,7 +332,7 @@ ASTNode::ASTNode(const char* type, const char* rawValue)
 ASTNode::ASTNode(const VarInfo &ref)
 {
     this->typeComputed = false;
-    if(ref.type=='u')
+    if (ref.type == 'u')
     {
         this->type = ref.customType;
         this->rawValue = "!Custom!";
@@ -323,17 +340,24 @@ ASTNode::ASTNode(const VarInfo &ref)
     else
     {
         this->type = ref.type;
-        if(ref.type=='s')
+        if (ref.type == 's')
             this->rawValue == ref.stringVal;
         else
         {
             char val[64];
             switch (ref.type)
             {
-            case 'i': sprintf(val, "%d", ref.intVal); break;
-            case 'f': sprintf(val, "%f", ref.floatVal); break;
-            case 'c': sprintf(val, "%c", ref.charVal); break;
-            case 'b': sprintf(val, "%s", ref.boolVal?"true":"false");
+            case 'i':
+                sprintf(val, "%d", ref.intVal);
+                break;
+            case 'f':
+                sprintf(val, "%f", ref.floatVal);
+                break;
+            case 'c':
+                sprintf(val, "%c", ref.charVal);
+                break;
+            case 'b':
+                sprintf(val, "%s", ref.boolVal ? "true" : "false");
             }
             this->rawValue = val;
         }
@@ -341,21 +365,22 @@ ASTNode::ASTNode(const VarInfo &ref)
     this->left = this->right = nullptr;
 }
 
-const char* ASTNode::computeType(bool& triggerErr)
+const char *ASTNode::computeType(bool &triggerErr)
 {
-    if(this->typeComputed==true)
+    if (this->typeComputed == true)
         return this->type.c_str();
     this->typeComputed = true;
-    if(this->left==nullptr && this->right==nullptr)
+    if (this->left == nullptr && this->right == nullptr)
         return this->type.c_str();
     string rhs = this->right->computeType(triggerErr);
-    if(rhs=="!nE!")
+    if (rhs == "!nE!")
     {
         this->type = "!nE!";
         return this->type.c_str();
     }
-    if(this->rawValue=="!")
-    {   if(rhs=="b")
+    if (this->rawValue == "!")
+    {
+        if (rhs == "b")
             this->type = "b";
         else
         {
@@ -365,20 +390,20 @@ const char* ASTNode::computeType(bool& triggerErr)
         return this->type.c_str();
     }
     string lhs = this->left->computeType(triggerErr);
-    if(lhs=="!nE!")
+    if (lhs == "!nE!")
     {
         this->type = "!nE!";
         return this->type.c_str();
     }
-    if(lhs!=rhs)
+    if (lhs != rhs)
     {
         this->type = "!tMM!";
         triggerErr = true;
         return this->type.c_str();
     }
-    if(this->type=="!bOp!")
+    if (this->type == "!bOp!")
     {
-        if(lhs=="b")
+        if (lhs == "b")
             this->type = "b";
         else
         {
@@ -386,9 +411,9 @@ const char* ASTNode::computeType(bool& triggerErr)
             triggerErr = true;
         }
     }
-    if(this->type=="!rOp!")
+    if (this->type == "!rOp!")
     {
-        if(lhs=="i" || lhs=="f")
+        if (lhs == "i" || lhs == "f")
             this->type = "b";
         else
         {
@@ -396,9 +421,9 @@ const char* ASTNode::computeType(bool& triggerErr)
             triggerErr = true;
         }
     }
-    if(this->type=="!aOp!")
+    if (this->type == "!aOp!")
     {
-        if(lhs=="i" || rhs=="f")
+        if (lhs == "i" || rhs == "f")
             this->type = lhs;
         else
         {
@@ -409,9 +434,9 @@ const char* ASTNode::computeType(bool& triggerErr)
     return this->type.c_str();
 }
 
-int ASTNode::computeIntVal(bool& triggerErr)
+int ASTNode::computeIntVal(bool &triggerErr)
 {
-    if(this->left==nullptr)
+    if (this->left == nullptr)
     {
         int result;
         sscanf(this->rawValue.c_str(), "%d", &result);
@@ -419,43 +444,45 @@ int ASTNode::computeIntVal(bool& triggerErr)
     }
     int lhs = this->left->computeIntVal(triggerErr);
     int rhs = this->right->computeIntVal(triggerErr);
-    if(triggerErr)
+    if (triggerErr)
         return 0;
 
-    if(this->rawValue == "+")
+    if (this->rawValue == "+")
         return lhs + rhs;
-    if(this->rawValue == "-")
+    if (this->rawValue == "-")
         return lhs - rhs;
-    if(this->rawValue == "/")
-        if(rhs==0)
+    if (this->rawValue == "*")
+        return lhs * rhs;
+    if (this->rawValue == "/")
+        if (rhs == 0)
         {
             triggerErr = true;
             return 0;
         }
         else
             return lhs / rhs;
-    if(this->rawValue == "%")
-        if(rhs==0)
+    if (this->rawValue == "%")
+        if (rhs == 0)
         {
             triggerErr = true;
             return 0;
         }
         else
             return lhs % rhs;
-    if(rhs<0)
+    if (rhs < 0)
     {
         triggerErr = true;
         return 0;
     }
     int result = 1;
-    for(int i = 0; i < rhs; i++)
+    for (int i = 0; i < rhs; i++)
         result *= lhs;
     return result;
 }
 
-float ASTNode::computeFloatVal(bool& triggerErr)
+float ASTNode::computeFloatVal(bool &triggerErr)
 {
-    if(this->left==nullptr)
+    if (this->left == nullptr)
     {
         float result;
         sscanf(this->rawValue.c_str(), "%f", &result);
@@ -463,24 +490,24 @@ float ASTNode::computeFloatVal(bool& triggerErr)
     }
     float lhs = this->left->computeFloatVal(triggerErr);
     float rhs = this->right->computeFloatVal(triggerErr);
-    if(triggerErr)
+    if (triggerErr)
         return 0;
 
-    if(this->rawValue == "+")
+    if (this->rawValue == "+")
         return lhs + rhs;
-    if(this->rawValue == "-")
+    if (this->rawValue == "-")
         return lhs - rhs;
-    if(this->rawValue == "*")
+    if (this->rawValue == "*")
         return lhs * rhs;
-    if(this->rawValue == "/")
-        if(rhs==0)
+    if (this->rawValue == "/")
+        if (rhs == 0)
         {
             triggerErr = true;
             return 0;
         }
         else
             return lhs / rhs;
-    if(this->rawValue == "%")
+    if (this->rawValue == "%")
     {
         triggerErr = true;
         return 0;
@@ -488,78 +515,77 @@ float ASTNode::computeFloatVal(bool& triggerErr)
     return pow(lhs, rhs);
 }
 
-bool ASTNode::computeBoolVal(bool& triggerErr)
+bool ASTNode::computeBoolVal(bool &triggerErr)
 {
-    if(this->type=="!bOp!")
-        if(this->rawValue[0]=='!')
+    if (this->type == "!bOp!")
+        if (this->rawValue[0] == '!')
         {
             bool res = this->right->computeBoolVal(triggerErr);
-            if(triggerErr)
+            if (triggerErr)
                 return false;
             return !res;
         }
-        if(this->rawValue[0]=='&')
-        {
-            bool lhs = this->left->computeBoolVal(triggerErr);
-            bool rhs = this->right->computeBoolVal(triggerErr);
-            if(triggerErr)
-                return false;
-            return lhs && rhs;
-        }
-        if(this->rawValue[0]=='|')
-        {
-            bool lhs = this->left->computeBoolVal(triggerErr);
-            bool rhs = this->right->computeBoolVal(triggerErr);
-            if(triggerErr)
-                return false;
-            return lhs || rhs;
-        }
-    if(this->type=="!rOp!")
-        if(this->left->type[0]=='i')
+    if (this->rawValue[0] == '&')
+    {
+        bool lhs = this->left->computeBoolVal(triggerErr);
+        bool rhs = this->right->computeBoolVal(triggerErr);
+        if (triggerErr)
+            return false;
+        return lhs && rhs;
+    }
+    if (this->rawValue[0] == '|')
+    {
+        bool lhs = this->left->computeBoolVal(triggerErr);
+        bool rhs = this->right->computeBoolVal(triggerErr);
+        if (triggerErr)
+            return false;
+        return lhs || rhs;
+    }
+    if (this->type == "!rOp!")
+        if (this->left->type[0] == 'i')
         {
             int lhs = this->left->computeIntVal(triggerErr);
             int rhs = this->right->computeIntVal(triggerErr);
-            if(triggerErr)
+            if (triggerErr)
                 return false;
-            if(this->rawValue == "==")
-                return lhs==rhs;
-            if(this->rawValue == "=/=")
-                return lhs!=rhs;
-            if(this->rawValue == "<=")
-                return lhs<=rhs;
-            if(this->rawValue == "=>")
-                return lhs>=rhs;
-            if(this->rawValue == "<")
-                return lhs<rhs;
-            return lhs>rhs;
+            if (this->rawValue == "==")
+                return lhs == rhs;
+            if (this->rawValue == "=/=")
+                return lhs != rhs;
+            if (this->rawValue == "<=")
+                return lhs <= rhs;
+            if (this->rawValue == "=>")
+                return lhs >= rhs;
+            if (this->rawValue == "<")
+                return lhs < rhs;
+            return lhs > rhs;
         }
         else
         {
             float lhs = this->left->computeFloatVal(triggerErr);
             float rhs = this->right->computeFloatVal(triggerErr);
-            if(triggerErr)
+            if (triggerErr)
                 return false;
-            if(this->rawValue == "==")
-                return lhs==rhs;
-            if(this->rawValue == "=/=")
-                return lhs!=rhs;
-            if(this->rawValue == "<=")
-                return lhs<=rhs;
-            if(this->rawValue == "=>")
-                return lhs>=rhs;
-            if(this->rawValue == "<")
-                return lhs<rhs;
-            return lhs>rhs;
+            if (this->rawValue == "==")
+                return lhs == rhs;
+            if (this->rawValue == "=/=")
+                return lhs != rhs;
+            if (this->rawValue == "<=")
+                return lhs <= rhs;
+            if (this->rawValue == "=>")
+                return lhs >= rhs;
+            if (this->rawValue == "<")
+                return lhs < rhs;
+            return lhs > rhs;
         }
     return false; // Here only to (safely) supress a warning.
 }
 
 void ASTNode::destroyTree()
 {
-    if(this->left!=nullptr)
+    if (this->left != nullptr)
         this->left->destroyTree();
-    if(this->right!=nullptr)
+    if (this->right != nullptr)
         this->right->destroyTree();
     delete this;
 }
-
