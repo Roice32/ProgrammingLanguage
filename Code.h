@@ -91,6 +91,5 @@ public:
     int computeIntVal(bool& triggerErr);
     float computeFloatVal(bool& triggerErr);
     bool computeBoolVal(bool& triggerErr);
-    void printTree() const;
     void destroyTree();
 };

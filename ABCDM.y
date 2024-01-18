@@ -379,7 +379,7 @@ argList: expr
        | argList ',' expr
        ;
 
-expr: '(' expr ')'    { $$ = $2; $$->computeType(ASTErr); }
+expr: '(' expr ')'    { $$ = $2; }
     | NOT expr    { $$ = new class ASTNode("!bOp!", "!"); $$->right = $2;
                     const char* res = $$->computeType(ASTErr);
                     if(ASTErr!=prevErr) ASTErrThrow(res, "!");
@@ -444,6 +444,7 @@ expr: '(' expr ')'    { $$ = $2; $$->computeType(ASTErr); }
               {
                 class VarInfo& data = ids.IDs[$1];
                 $$ = new class ASTNode(data);
+                $$->typeComputed = true;
               }
               else
               {

@@ -7,10 +7,10 @@
 "Changing"    { yylval.typeInfo = strdup("v"); return VARIABLE; }
 "Neverchanging"    { yylval.typeInfo = strdup("c"); return CONSTANT; } 
 
+"Float"    { yylval.typeInfo = strdup("f"); return FLOAT; }
+[0][.][0-9]+|[-]?[1-9][0-9]*[.][0-9]* { yylval.rawValue = strdup(yytext); return FLOAT_VAL; }
 "Int"    { yylval.typeInfo = strdup("i"); return INT; }
 [0]|[-]?[1-9][0-9]*    { yylval.rawValue = strdup(yytext); return INT_VAL; }
-"Float"    { yylval.typeInfo = strdup("f"); return FLOAT; }
-[0]|[-]?[1-9][0-9]*[.][0-9]* { yylval.rawValue = strdup(yytext); return FLOAT_VAL; }
 "Char"     { yylval.typeInfo = strdup("c"); return CHAR; }
 ['].[']    { yylval.rawValue = strdup(yytext+1); yylval.rawValue[1]='\0'; return CHAR_VAL; }
 "String"    { yylval.typeInfo = strdup("s"); return STRING; }
