@@ -35,6 +35,7 @@ VarInfo::VarInfo()
     arrSize = 0;
     array = nullptr;
     isVariable = false;
+    wasInitialized = false;
     scope = "";
 }
 
@@ -43,20 +44,24 @@ VarInfo::VarInfo(const char type, const bool variable, const int size, const str
     this->type = type;
     this->customType = "";
     this->isVariable = variable;
+    this->wasInitialized = false;
     this->scope = scope;
     this->arrSize = size;
     if (this->arrSize > 0)
     {
         this->array = new VarInfo[arrSize];
         for (int i = 0; i < arrSize; i++)
+        {
             this->array[i].type = this->type;
+            this->array[i].isVariable = this->isVariable;
+            this->array[i].wasInitialized = false;
+        }
     }
     else
         this->array = nullptr;
     this->fields = nullptr;
 }
 
-// LORD KNOWS HOW TO MODIFY THIS LATER
 VarInfo::VarInfo(const string type, const bool variable, const int size, const string scope, const CustomTypesList *cts)
 {
     this->type = 'u';
@@ -71,7 +76,7 @@ VarInfo::VarInfo(const string type, const bool variable, const int size, const s
     fields = new IDList;
     const IDList *neededFields = cts->CustomTypes.find(type)->second;
     for (const auto &fld : neededFields->IDs)
-        fields->addVar(fld.first, variable, fld.second.type, "Inherited (Member)");
+        fields->addVar(fld.first, variable, fld.second.type, "Member");
 }
 
 void VarInfo::printType() const
@@ -101,6 +106,11 @@ void VarInfo::printType() const
 
 void VarInfo::printPlainVal() const
 {
+    if(!this->wasInitialized)
+    {
+        cout << "*NotInit*";
+        return;
+    }
     switch (type)
     {
     case 'i':
@@ -189,7 +199,18 @@ void IDList::setValue(const string name, const char *value) // TO DO: CUSTOM TYP
     }
 }
 
-// TO DO: MODIFY THIS TO WORK FOR ARRAYS
+bool IDList::isInScope(const string name, const string scope)
+{
+    if(!this->existsVar(name))
+        return false;
+    string& ref = this->IDs[name].scope;
+    if(ref=="Global Variables")
+        return true;
+    if(scope.substr(0, ref.length()) == ref)
+        return true;
+    return false;
+}
+
 void IDList::copyValue(const string name, const VarInfo *target)
 {
     VarInfo &ref = this->IDs.at(name);
@@ -243,7 +264,7 @@ bool IDList::existsVar(const string name) const
     return IDs.find(name) != IDs.end();
 }
 
-void IDList::printVars() const // TO DO: ALSO PRINT VALUES FOR ARRAYS & CUSTOMS
+void IDList::printVars() const
 {
     for (const auto &var : IDs)
     {

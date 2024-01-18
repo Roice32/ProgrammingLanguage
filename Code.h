@@ -5,7 +5,6 @@
 using namespace std;
 
 bool isPlainType(const char *type);
-
 const char* prettyExprType(const char* type);
 
 class VarInfo
@@ -26,6 +25,7 @@ public:
     class IDList *fields;
 
     bool isVariable;
+    bool wasInitialized;
 
     string scope;
 
@@ -45,6 +45,7 @@ public:
     unordered_map<string, VarInfo> IDs;
 
     bool existsVar(const string name) const;
+    bool isInScope(const string name, const string scope);
     void addVar(const string name, const bool variable, const char type, const string scope);
     void addArrayVar(const string name, const bool variable, const string type, const int size, const string scope);
     void addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList *cts);
