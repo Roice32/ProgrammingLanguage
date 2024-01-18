@@ -12,19 +12,21 @@ Neverchanging Bool b <-- true;
     endGlobalFuns
 
     beginProgram
-Neverchanging Char x <-- 'c';
-Eval(c);
-Eval(2^^2);
-Changing Char cClone <-- c;
-Eval((2.5*3.0)/4.0);
-Eval(((2+2)<=5)&&(!(2.2<1.0)));
-Changing Int iArr[3];
-Neverchanging Char cArr[6] <-- [ 0 ];
-TypeOf((2+2)<(3+3));
-TypeOf(true&&false);
+Eval(2*3*4);
+Eval(2+2^^2);
 LoopWhile (5)
 {
+    i <-- 0;
+    Changing Int j[2];
+    j[0] <-- 2;
+    Changing Float fArr[5];
+    fArr[2] <-- 1.0;
+    fArr[1+1+1] <-- -4.4;
+    fArr[4] <-- 0.5+2.0*(-3.0);
+    fArr[0] <-- fArr[4]+fArr[j[i]]*(-2.0);
+    fArr[1] <-- fArr[0]-fArr[4]+2.0^^fArr[2];
     Changing Char w <-- 'w';
+    w <-- 'x';
     If ((2+2)<(3+'a'))
     {
         Neverchanging String innerS <-- "some text";
@@ -33,9 +35,8 @@ LoopWhile (5)
     {
         Changing Bool bbb <-- false;
     };
+    bbb <-- true;
 };
 Changing Float fClone <-- f;
-TypeOf(2 < 5);
-TypeOf(2^^2.5);
 Changing String s <-- "abcd";
     endProgram
