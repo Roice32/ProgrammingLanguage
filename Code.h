@@ -56,10 +56,10 @@ public:
 class CustomTypesList
 {
 public:
-    unordered_map<string, IDList> CustomTypes;
+    unordered_map<string, IDList*> CustomTypes;
 
     bool existsCustom(const string name) const;
-    void addCustom(const string name, const IDList contents);
+    void addCustom(const string name, IDList* contents);
     void printCustoms() const;
     ~CustomTypesList();
 };
@@ -81,13 +81,16 @@ class ASTNode
 {
 public:
     string type;
+    bool typeComputed;
     string rawValue;
     class ASTNode* left;
     class ASTNode* right;
-};
-
-class ASTree
-{
-public:
-    class ASTNode* root;
+    ASTNode(const char* type, const char* rawValue);
+    ASTNode(const VarInfo& ref);
+    const char* computeType(bool& triggerErr);
+    int computeIntVal(bool& triggerErr);
+    float computeFloatVal(bool& triggerErr);
+    bool computeBoolVal(bool& triggerErr);
+    void printTree() const;
+    void destroyTree();
 };
