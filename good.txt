@@ -1,0 +1,45 @@
+    beginCustoms
+
+    endCustoms
+
+    beginGlobalVars
+Neverchanging Float i <-- 1.0;
+Changing Int arr[5];
+    endGlobalVars
+
+    beginGlobalFuns
+Void voidFun(Neverchanging Bool nb)
+{
+    Changing String str <-- "abc";
+    Neverchanging String strCop <-- str;
+}    
+Int yourFun(Changing Int yourA, Changing Float yourB)
+{
+    Neverchanging Bool yourC <-- true;
+    Return yourA;
+}
+    endGlobalFuns
+
+    beginProgram
+Neverchanging Int a <-- 1;
+Neverchanging Bool b <-- true;
+Neverchanging Float c <-- 1.2;
+Neverchanging Char d <-- 'a';
+Neverchanging String e <-- "asdf";
+
+
+Changing Int farr[5];
+farr[0] <-- 0;
+farr[1] <-- 1;
+farr[2] <-- 2;
+farr[3] <-- 3;
+farr[4] <-- 4;
+
+arr[farr[0]] <-- 4;
+arr[farr[1]] <-- farr[3];
+arr[farr[2]] <-- farr[2];
+arr[farr[3]] <-- farr[1];
+arr[farr[4]] <-- farr[0];
+
+Changing Bool f <-- (2 < 3);
+    endProgram
