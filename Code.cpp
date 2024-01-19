@@ -26,6 +26,25 @@ const char* prettyExprType(const char *type)
     return custom;
 }
 
+void printToFile(const char* name, const IDList& vars, const FunctionsList& funs)
+{
+    char base[64], outputFile[128];
+    sprintf(base, "%s", name);
+    int i = 0;
+    while(base[i]!='\0') ++i;
+    --i;
+    while(base[i]!='.') --i;
+    base[i] = '\0';
+    snprintf(outputFile, 128, "%s.symbolTable.txt", base);
+    remove(outputFile);
+    ofstream out(outputFile, ios::app);
+    out << "\t\tVariables & Constants:\n";
+    vars.printVars(out, false);
+    out << "\t\tFunctions:\n";
+    funs.printFuns(out);
+    out.close();
+}
+
 VarInfo::VarInfo()
 {
     type = 0;
@@ -82,104 +101,104 @@ VarInfo::VarInfo(const string type, const bool variable, const int size, const s
         fields->addVar(fld.first, variable, fld.second.type, "Member");
 }
 
-void VarInfo::printType() const
+void VarInfo::printType(ofstream& out) const
 {
     switch (this->type)
     {
     case 'i':
-        cout << "Int";
+        out << "Int";
         break;
     case 'f':
-        cout << "Float";
+        out << "Float";
         break;
     case 'c':
-        cout << "Char";
+        out << "Char";
         break;
     case 's':
-        cout << "String";
+        out << "String";
         break;
     case 'b':
-        cout << "Bool";
+        out << "Bool";
         break;
     case 'u':
-        cout << "Custom (" << this->customType << ")";
+        out << "Custom (" << this->customType << ")";
         break;
     }
 }
 
-void VarInfo::printPlainVal() const
+void VarInfo::printPlainVal(ofstream& out) const
 {
     if(!this->wasInitialized)
     {
-        cout << "*NotInit*";
+        out << "(NotInit/NonDeterm)";
         return;
     }
     switch (type)
     {
     case 'i':
-        cout << this->intVal;
+        out << this->intVal;
         break;
     case 'f':
-        cout << this->floatVal;
+        out << this->floatVal;
         break;
     case 'c':
-        cout << '\'' << this->charVal << '\'';
+        out << '\'' << this->charVal << '\'';
         break;
     case 's':
-        cout << '\"' << this->stringVal << '\"';
+        out << '\"' << this->stringVal << '\"';
         break;
     case 'b':
-        cout << (this->boolVal == true ? "true" : "false");
+        out << (this->boolVal == true ? "true" : "false");
         break;
     }
 }
 
-void VarInfo::printArray() const
+void VarInfo::printArray(ofstream& out) const
 {
     for (int i = 0; i < arrSize; i++)
     {
-        array[i].printPlainVal();
+        array[i].printPlainVal(out);
         if (i < arrSize - 1)
-            cout << "|";
+            out << "|";
     }
 }
 
-void VarInfo::printCustomVar() const
+void VarInfo::printCustomVar(ofstream& out) const
 {
     for (auto const &fld : fields->IDs)
     {
-        cout << "[Name: " << fld.first;
+        out << "[Name: " << fld.first;
         if (fld.second.arrSize > 0)
-            cout << ", Array size: " << fld.second.arrSize;
-        cout << ", Type: ";
+            out << ", Array size: " << fld.second.arrSize;
+        out << ", Type: ";
         switch (fld.second.type)
         {
         case 'i':
-            cout << "Int, Value: " << fld.second.intVal << "] ";
+            out << "Int, Value: " << fld.second.intVal << "] ";
             break;
         case 'f':
-            cout << "Float, Value: " << fld.second.floatVal << "] ";
+            out << "Float, Value: " << fld.second.floatVal << "] ";
             break;
         case 'c':
-            cout << "Char, Value: " << fld.second.charVal << "] ";
+            out << "Char, Value: " << fld.second.charVal << "] ";
             break;
         case 's':
-            cout << "String, Value: \"" << fld.second.stringVal << "\"] ";
+            out << "String, Value: \"" << fld.second.stringVal << "\"] ";
             break;
         case 'b':
-            cout << "Bool, Value: " << (fld.second.boolVal == true ? "true" : "false") << "] ";
+            out << "Bool, Value: " << (fld.second.boolVal == true ? "true" : "false") << "] ";
             break;
         }
     }
 }
 
-VarInfo::~VarInfo() // THROWS SEGMENTATION FAULT
+VarInfo::~VarInfo()
 {
     // if(array!=nullptr)
     //     delete[] array;
 }
 
-void IDList::setValue(const string name, const char *value) // TO DO: CUSTOM TYPES
+void IDList::setValue(const string name, const char *value)
 {
     VarInfo &ref = this->IDs.at(name);
     switch (ref.type)
@@ -243,7 +262,6 @@ void IDList::addVar(const string name, const bool variable, const char type, con
     IDs.insert({name, info});
 }
 
-// MAKE THIS WORK FOR CUSTOMS
 void IDList::addArrayVar(const string name, const bool variable, const string type, const int size, const string scope) // TO DO: CONST/VAR
 {
     VarInfo info(type[0], variable, size, scope);
@@ -255,7 +273,6 @@ VarInfo *IDList::accessCustomField(const string name, const string field)
     return &IDs.find(name)->second.fields->IDs.find(field)->second;
 }
 
-// TO DO: ARRAYS
 void IDList::addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList *cts)
 {
     VarInfo info(type, variable, 0, scope, cts);
@@ -267,33 +284,33 @@ bool IDList::existsVar(const string name) const
     return IDs.find(name) != IDs.end();
 }
 
-void IDList::printVars(const bool compact) const
+void IDList::printVars(ofstream& out, const bool compact) const
 {
     int elemsLeft = this->IDs.size();
     for (const auto &var : IDs)
     {
         --elemsLeft;
-        cout << "[Name: " << var.first << ", Type: ";
-        var.second.printType();
-        cout << ", " << (var.second.isVariable ? "Variable" : "Constant");
+        out << "[Name: " << var.first << ", Type: ";
+        var.second.printType(out);
+        out << ", " << (var.second.isVariable ? "Variable" : "Constant");
         if (var.second.arrSize > 0)
         {
-            cout << ", Array size: " << var.second.arrSize << ", Values: {";
-            var.second.printArray();
-            cout << "}";
+            out << ", Array size: " << var.second.arrSize << ", Values: {";
+            var.second.printArray(out);
+            out << "}";
         }
         else if (var.second.type == 'u')
         {
-            cout << ", Fields: { ";
-            var.second.printCustomVar();
-            cout << "}";
+            out << ", Fields: { ";
+            var.second.printCustomVar(out);
+            out << "}";
         }
         else
         {
-            cout << ", Value: ";
-            var.second.printPlainVal();
+            out << ", Value: ";
+            var.second.printPlainVal(out);
         }
-        cout << ", Scope: " << var.second.scope << ((compact && elemsLeft==0)?"]":"]\n");
+        out << ", Scope: " << var.second.scope << ((compact && elemsLeft==0)?"]":"]\n");
     }
 }
 
@@ -381,29 +398,34 @@ FunInfo::FunInfo(const char* returnType, IDList* params, IDList* other)
     }
 }
 
+bool FunctionsList::existsFun(const char* name)
+{
+    return this->Funs.find(name)!=this->Funs.end();
+}
+
 void FunctionsList::addFun(const char* name, const char* retType, IDList* params, IDList* other)
 {
     FunInfo info(retType, params, other);
     this->Funs.insert({name, info});
 }
 
-void FunctionsList::printFuns() const
+void FunctionsList::printFuns(ofstream& out) const
 {
     for(auto& f: this->Funs)
     {
-        cout << "\t[Name: " << f.first;
-        cout << ", Return type: " << f.second.returnType;
-        cout << ",\nParameters (" << f.second.nParam << "): {";
-        f.second.params.printVars(true);
-        cout << " }";
+        out << "\t[Name: " << f.first;
+        out << ", Return type: " << f.second.returnType;
+        out << ",\nParameters (" << f.second.nParam << "): {";
+        f.second.params.printVars(out, true);
+        out << " }";
         if(f.second.hasOther)
         {
-            cout << ",\nOther variables: {";
-            f.second.other.printVars(true);
-            cout << "}]\n";
+            out << ",\nOther variables: {";
+            f.second.other.printVars(out, true);
+            out << "}]\n";
         }
         else
-            cout << "]\n";
+            out << "]\n";
     }
 }
 

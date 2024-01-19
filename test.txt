@@ -11,7 +11,8 @@ Neverchanging Bool b;
     beginGlobalFuns
 Void voidFun(Neverchanging Bool nb)
 {
-    Eval(1+1);
+    Changing String str <-- "abc";
+    Neverchanging String strCop <-- str;
 }    
 Int yourFun(Changing Int yourA, Changing Float yourB)
 {
@@ -21,10 +22,15 @@ Int yourFun(Changing Int yourA, Changing Float yourB)
     endGlobalFuns
 
     beginProgram
+voidFun(nb: true);
+voidFun(s: true, b: false);
 Eval(2*3*4);
 Eval(2+2^^2);
 LoopWhile (5)
 {
+
+    Changing Int x;
+    Changing Int xX <-- x;
     i <-- 0;
     Changing Char NaN[1/0];
     Changing Int j[2];

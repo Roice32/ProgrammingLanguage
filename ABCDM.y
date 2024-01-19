@@ -9,7 +9,7 @@ extern int yylex();
 
 char errmsg[128];
 int nErr = 0;
-bool ASTErr, prevErr, copyA, copyP;
+bool ASTErr, prevErr, copyA, copyP, canBeDetermined;
 void yyerror(const char* s);
 void ASTErrThrow(const char* type, const char* op);
 
@@ -28,6 +28,7 @@ string retType;
      class IDList* innerIDs;
      class ASTNode* exprAST;
      class VarInfo* assignTo;
+     class ArgsList* args;
 }
 
 %token BEGINC ENDC BEGINGV ENDGV BEGINGF ENDGF BEGINP ENDP
@@ -42,7 +43,8 @@ string retType;
 %type <innerIDs> contents paramList funBody block statement
 %type <assignTo> assignable
 %type <exprAST> expr
-%type <ID> varDecl member param
+%type <args> argList
+%type <ID> varDecl member param functionCall
 %token <ID> ID
 %token CUSTOM ACCESS ASSIGN
 %token ADD SUB MUL DIV MOD POW
@@ -107,9 +109,8 @@ contents: member ';'    { $$ = new class IDList;
                                        } }
         ;
 
-// TO DO: ALSO LET IT BE A METHOD
 member: varDecl    { $$ = $1; }
-      //| funDecl 
+      | funDecl    { ; }
       ;
 
 globalVariables: BEGINGV { sprintf(scope, "Global Variables"); } ENDGV
@@ -130,7 +131,7 @@ varDecl : variability typeUnion ID    { $$ = strdup("");
                                             }
                                             else if(cts.existsCustom($2))
                                             {
-                                                ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, scope, &cts); // TO DO: IMPLEMENT DEFAULT FOR THIS
+                                                ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, scope, &cts);
                                                 $$ = strdup($3);
                                             }
                                             else
@@ -187,8 +188,7 @@ varDecl : variability typeUnion ID    { $$ = strdup("");
                                                        } 
                                                    }
                                                    $6->destroyTree(); }
-       // ONLY IF CLASSES WORK
-       /*| variability typeUnion ID '(' initList ')'    { $$ = strdup("");
+       | variability typeUnion ID '(' argList ')'    { $$ = strdup("");
                                                         if(!ids.existsVar($3))
                                                         {
                                                             if(!isPlainType($2))
@@ -209,7 +209,7 @@ varDecl : variability typeUnion ID    { $$ = strdup("");
                                                         }
                                                         else
                                                         { sprintf(errmsg, "Redeclaration of identifier '%s'.", $3);
-                                                          yyerror(errmsg); }} */
+                                                          yyerror(errmsg); }}
        | variability typeUnion ID { ASTErr = prevErr = false; }
                                   '[' expr ']'    { $$ = strdup("");
                                                     const char* exprType = $6->computeType(ASTErr);
@@ -246,13 +246,6 @@ typeUnion: type    { $$ = $1; }
          | CUSTOM ID    { $$ = $2; }
          ;
 
-initList: initArg
-        | initList ',' initArg
-        ;
-
-initArg: expr
-       ;
-
 globalFunctions: BEGINGF { sprintf(scope, "Global Functions"); } ENDGF
                | BEGINGF { sprintf(scope, "Global Functions"); } funDeclarations ENDGF
                ;
@@ -265,12 +258,26 @@ funDecl: returnType ID '(' { snprintf(prevScope, 256, "%s", scope);
                              snprintf(scope, 256, "%s > %s", prevScope, $2);
                              retType = $1; }
                           ')' '{' funBody '}'    { fs.addFun($2, $1, nullptr, $7);
-                                                   snprintf(scope, 256, "%s", prevScope); }
+                                                   snprintf(scope, 256, "%s", prevScope);
+                                                   for(auto& fun: fs.Funs)
+                                                       if(fun.first == $2)
+                                                           if(fun.second.hasOther)
+                                                               for(auto& var: fun.second.other.IDs)
+                                                                   ids.IDs.erase(var.first); }
        | returnType ID '(' { snprintf(prevScope, 256, "%s", scope);
                              snprintf(scope, 256, "%s > %s", prevScope, $2);
                              retType = $1; } 
                           paramList ')' '{' funBody'}'    { fs.addFun($2, $1, $5, $8);
-                                                            snprintf(scope, 256, "%s", prevScope); }
+                                                            snprintf(scope, 256, "%s", prevScope);
+                                                            for(auto& fun: fs.Funs)
+                                                                if(fun.first == $2)
+                                                                {
+                                                                    for(auto& var: fun.second.params.IDs)
+                                                                        ids.IDs.erase(var.first);
+                                                                    if(fun.second.hasOther)
+                                                                        for(auto& var: fun.second.other.IDs)
+                                                                            ids.IDs.erase(var.first);
+                                                                } }
        ;
 
 returnType: typeUnion    { $$ = $1; }
@@ -283,11 +290,12 @@ funBody: RETURN { ASTErr = prevErr = false; }
                               else
                               {
                                   const char* exprType = $3->computeType(ASTErr);
-                                  if(retType!=exprType)
-                                  {
-                                      sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
-                                      yyerror(errmsg);
-                                  }
+                                  if(!ASTErr)
+                                      if(retType!=exprType)
+                                      {
+                                          sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
+                                          yyerror(errmsg);
+                                      }
                               } 
                               $$ = nullptr; }
        | block RETURN { ASTErr = prevErr = false; }
@@ -296,11 +304,12 @@ funBody: RETURN { ASTErr = prevErr = false; }
                                     else
                                     {
                                         const char* exprType = $4->computeType(ASTErr);
-                                        if(retType!=exprType)
-                                        {
-                                            sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
-                                            yyerror(errmsg);
-                                        }
+                                        if(!ASTErr)
+                                            if(retType!=exprType)
+                                            {
+                                                sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
+                                                yyerror(errmsg);
+                                            }
                                     }
                                     $$ = $1;}
        | block    { if(retType!="v")
@@ -315,14 +324,12 @@ paramList: param    { $$ = new class IDList;
                       if($1[0]!='\0')
                       {
                         $$->IDs.insert({$1, ids.IDs[$1]});
-                        ids.IDs.erase($1);
                       } }
          | paramList ',' param    { $$ = $1;
                                     if($3[0]!='\0')
                                         if(!$$->existsVar($3))
                                         {
                                             $$->IDs.insert({$3, ids.IDs[$3]});
-                                            ids.IDs.erase($3);
                                         }
                                         else
                                         {
@@ -368,11 +375,10 @@ block: statement ';'    { $$ = $1; }
                               }
      ;
 
-statement: varDecl    { if(strstr(scope, "Global Variables")!=scope && strstr(scope, "Main Program")!=scope)
+statement: varDecl    { if(strstr(scope, "Global Variables")!=scope && strstr(scope, "Main Program")!=scope && $1[0]!='\0') 
                         {
                             $$ = new class IDList;
                             $$->IDs.insert({$1, ids.IDs[$1]});
-                            ids.IDs.erase($1);
                         } }
          | functionCall    { $$ = nullptr; }
          | assignment    { $$ = nullptr; }
@@ -545,12 +551,42 @@ assignable: ID    { $$ = nullptr;
           //| ID ACCESS ID
           ;
 
-functionCall: ID '(' ')'
-            | ID '(' argList ')'
+functionCall: ID '(' ')'    { if(fs.existsFun($1))
+                              {
+                                  for(auto& fun: fs.Funs)
+                                  if(fun.first==$1)
+                                      if(fun.second.nParam>0)
+                                      {
+                                          sprintf(errmsg, "Function '%s' expected %d parameters, given 0.", $1, fun.second.nParam);
+                                          yyerror(errmsg);
+                                      }
+                              }
+                              else
+                              {
+                                  sprintf(errmsg, "Function '%s' was not found in this scope.", $1);
+                                  yyerror(errmsg);
+                              } }
+            | ID '(' argList ')'    { if(fs.existsFun($1))
+                                      {
+                                          for(auto& fun: fs.Funs)
+                                          if(fun.first==$1)
+                                              if(fun.second.nParam!=$3->args.size())
+                                              {
+                                                  sprintf(errmsg, "Function '%s' expected %d parameters, given %d", $1, fun.second.nParam, $3->args.size());
+                                                  yyerror(errmsg);
+                                              }
+                                      }
+                                      else
+                                      {
+                                          sprintf(errmsg, "Function '%s' was not found in this scope.", $1);
+                                          yyerror(errmsg);
+                                      } }
             ;
 
-argList: expr
-       | argList ',' expr
+argList: ID ':' expr    { $$ = new class ArgsList;
+                          $$->args.insert({$1, $3}); }
+       | argList ',' ID ':' expr    { $$ = $1;
+                                      $$->args.insert({$3, $5}); }
        ;
 
 expr: '(' expr ')'    { $$ = $2; }
@@ -622,9 +658,34 @@ expr: '(' expr ')'    { $$ = $2; }
                           ASTErr = prevErr = true;
                       }
                       $$->typeComputed = true; }
-    //| functionCall // TO DO
-    //| ID ACCESS ID // ONLY IF CLASSES
-    //| ID ACCESS functionCall // ONLY IF CLASSES
+    | functionCall    { if($1!=nullptr)
+                        {
+                            for(auto& fun: fs.Funs)
+                                if(fun.first == $1)
+                                {
+                                    if(fun.second.returnType=="v")
+                                    {
+                                        ASTErr = prevErr = true;
+                                        sprintf(errmsg, "Cannot use 'Void' type function '%s' inside expression.", $1);
+                                        yyerror(errmsg);
+                                        $$ = new class ASTNode("!nE!", "");
+                                        $$->typeComputed = true;
+                                    }
+                                    else
+                                    {
+                                        $$ = new class ASTNode(fun.second.returnType.c_str(), $1);
+                                        $$->typeComputed = true;
+                                    }
+                                }
+                        } 
+                        else
+                        {
+                            ASTErr = prevErr = true;
+                            $$ = new class ASTNode("!nE!", "");
+                            $$->typeComputed = true;
+                        }}
+    | ID ACCESS ID    { ; }
+    | ID ACCESS functionCall    { ; }
     | INT_VAL    { $$ = new class ASTNode("i", $1); $$->typeComputed = true; }
     | FLOAT_VAL    { $$ = new class ASTNode("f", $1); $$->typeComputed = true; }
     | CHAR_VAL    { $$ = new class ASTNode("c", $1); $$->typeComputed = true; }
@@ -659,18 +720,6 @@ int main(int argc, char** argv)
 {
      yyin = fopen(argv[1],"r");
      yyparse();
-     cout << "Custom-types:" << endl;
-     cts.printCustoms();
-     cout << "Variables:" << endl;
-     ids.printVars(false);
-     cout << "Functions:" << endl;
-     fs.printFuns();
+     printToFile(argv[1], ids, fs);
 
 }
-// CLASSES MIGHT WORK WITH [KEY] INSTEAD OF .AT(KEY) - P.S.: THEY WORK MY AHH
-// TO DO OVERALL: METHODS & FUNCTIONS
-//              | PRINT STUFF TO FILE
-//              | COMMENTS?
-//              | SPECIAL ASSIGNMENT VALUE WHEN NON-DETERMINABLE
-//              | CHECK SCOPE WHEN VERIFYING ID EXISTENCE
-//              | fArr[0] <-- fArr[4]+fArr[j[i]]*(-2.0); PUT THIS IN FINAL SAMPLE CODE
