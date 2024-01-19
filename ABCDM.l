@@ -47,6 +47,7 @@
 "For"    { return FOR; }
 "Do"    { return DO; }
 
+"Void"    { yylval.typeInfo = strdup("v"); return VOID; }
 "Return"    { return RETURN; }
 
 "Eval"    { return EVAL; }

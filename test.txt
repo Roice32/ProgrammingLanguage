@@ -5,10 +5,19 @@
 Changing Int i;
 Changing Char c <-- 'a';
 Changing Float f <-- -1.24;
-Neverchanging Bool b <-- true;
+Neverchanging Bool b;
     endGlobalVars
 
     beginGlobalFuns
+Void voidFun(Neverchanging Bool nb)
+{
+    Eval(1+1);
+}    
+Int yourFun(Changing Int yourA, Changing Float yourB)
+{
+    Neverchanging Bool yourC <-- true;
+    Return yourC;
+}
     endGlobalFuns
 
     beginProgram
@@ -17,15 +26,18 @@ Eval(2+2^^2);
 LoopWhile (5)
 {
     i <-- 0;
+    Changing Char NaN[1/0];
     Changing Int j[2];
     j[0] <-- 2;
+    Changing Int smudge;
     Changing Float fArr[5];
     fArr[2] <-- 1.0;
     fArr[1+1+1] <-- -4.4;
     fArr[4] <-- 0.5+2.0*(-3.0);
     fArr[0] <-- fArr[4]+fArr[j[i]]*(-2.0);
     fArr[1] <-- fArr[0]-fArr[4]+2.0^^fArr[2];
-    Changing Char w <-- 'w';
+    Changing Char w <-- '.';
+    Changing Int jClone <-- j[0];
     w <-- 'x';
     If ((2+2)<(3+'a'))
     {

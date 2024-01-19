@@ -5,7 +5,6 @@
 using namespace std;
 
 bool isPlainType(const char *type);
-
 const char* prettyExprType(const char* type);
 
 class VarInfo
@@ -26,6 +25,7 @@ public:
     class IDList *fields;
 
     bool isVariable;
+    bool wasInitialized;
 
     string scope;
 
@@ -45,13 +45,15 @@ public:
     unordered_map<string, VarInfo> IDs;
 
     bool existsVar(const string name) const;
+    bool isInScope(const string name, const string scope);
     void addVar(const string name, const bool variable, const char type, const string scope);
     void addArrayVar(const string name, const bool variable, const string type, const int size, const string scope);
     void addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList *cts);
     VarInfo *accessCustomField(const string name, const string field);
     void setValue(const string name, const char *value);
     void copyValue(const string name, const class VarInfo* target);
-    void printVars() const;
+    void printVars(const bool compact) const;
+    IDList& operator+=(IDList& other);
     ~IDList();
 };
 
@@ -71,12 +73,18 @@ class FunInfo
 public:
     string returnType;
     int nParam;
+    IDList params;
+    bool hasOther;
+    IDList other;
+    FunInfo(const char* returnType, IDList* params, IDList* other);
 };
 
 class FunctionsList
 {
 public:
     unordered_map<string, FunInfo> Funs;
+    void addFun(const char* name, const char* retType, IDList* params, IDList* other);
+    void printFuns() const;
 };
 
 class ASTNode
