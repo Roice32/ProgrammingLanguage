@@ -22,6 +22,8 @@ Int yourFun(Changing Int yourA, Changing Float yourB)
     endGlobalFuns
 
     beginProgram
+voidFun(nb: true);
+voidFun(s: true, b: false);
 Eval(2*3*4);
 Eval(2+2^^2);
 LoopWhile (5)

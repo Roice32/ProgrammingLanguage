@@ -106,4 +106,11 @@ public:
     void destroyTree();
 };
 
+class ArgsList
+{
+public:
+    unordered_map<string, ASTNode*> args;
+
+};
+
 void printToFile(const char* name, const IDList& vars, const FunctionsList& funs);

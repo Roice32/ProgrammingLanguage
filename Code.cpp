@@ -192,13 +192,13 @@ void VarInfo::printCustomVar(ofstream& out) const
     }
 }
 
-VarInfo::~VarInfo() // THROWS SEGMENTATION FAULT
+VarInfo::~VarInfo()
 {
     // if(array!=nullptr)
     //     delete[] array;
 }
 
-void IDList::setValue(const string name, const char *value) // TO DO: CUSTOM TYPES
+void IDList::setValue(const string name, const char *value)
 {
     VarInfo &ref = this->IDs.at(name);
     switch (ref.type)
@@ -262,7 +262,6 @@ void IDList::addVar(const string name, const bool variable, const char type, con
     IDs.insert({name, info});
 }
 
-// MAKE THIS WORK FOR CUSTOMS
 void IDList::addArrayVar(const string name, const bool variable, const string type, const int size, const string scope) // TO DO: CONST/VAR
 {
     VarInfo info(type[0], variable, size, scope);
@@ -274,7 +273,6 @@ VarInfo *IDList::accessCustomField(const string name, const string field)
     return &IDs.find(name)->second.fields->IDs.find(field)->second;
 }
 
-// TO DO: ARRAYS
 void IDList::addCustomVar(const string name, const bool variable, const string type, const string scope, const CustomTypesList *cts)
 {
     VarInfo info(type, variable, 0, scope, cts);
