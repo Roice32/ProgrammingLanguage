@@ -9,7 +9,7 @@ extern int yylex();
 
 char errmsg[128];
 int nErr = 0;
-bool ASTErr, prevErr, copyA, copyP;
+bool ASTErr, prevErr, copyA, copyP, canBeDetermined;
 void yyerror(const char* s);
 void ASTErrThrow(const char* type, const char* op);
 
@@ -246,13 +246,6 @@ typeUnion: type    { $$ = $1; }
          | CUSTOM ID    { $$ = $2; }
          ;
 
-initList: initArg
-        | initList ',' initArg
-        ;
-
-initArg: expr
-       ;
-
 globalFunctions: BEGINGF { sprintf(scope, "Global Functions"); } ENDGF
                | BEGINGF { sprintf(scope, "Global Functions"); } funDeclarations ENDGF
                ;
@@ -265,12 +258,26 @@ funDecl: returnType ID '(' { snprintf(prevScope, 256, "%s", scope);
                              snprintf(scope, 256, "%s > %s", prevScope, $2);
                              retType = $1; }
                           ')' '{' funBody '}'    { fs.addFun($2, $1, nullptr, $7);
-                                                   snprintf(scope, 256, "%s", prevScope); }
+                                                   snprintf(scope, 256, "%s", prevScope);
+                                                   for(auto& fun: fs.Funs)
+                                                       if(fun.first == $2)
+                                                           if(fun.second.hasOther)
+                                                               for(auto& var: fun.second.other.IDs)
+                                                                   ids.IDs.erase(var.first); }
        | returnType ID '(' { snprintf(prevScope, 256, "%s", scope);
                              snprintf(scope, 256, "%s > %s", prevScope, $2);
                              retType = $1; } 
                           paramList ')' '{' funBody'}'    { fs.addFun($2, $1, $5, $8);
-                                                            snprintf(scope, 256, "%s", prevScope); }
+                                                            snprintf(scope, 256, "%s", prevScope);
+                                                            for(auto& fun: fs.Funs)
+                                                                if(fun.first == $2)
+                                                                {
+                                                                    for(auto& var: fun.second.params.IDs)
+                                                                        ids.IDs.erase(var.first);
+                                                                    if(fun.second.hasOther)
+                                                                        for(auto& var: fun.second.other.IDs)
+                                                                            ids.IDs.erase(var.first);
+                                                                } }
        ;
 
 returnType: typeUnion    { $$ = $1; }
@@ -283,11 +290,12 @@ funBody: RETURN { ASTErr = prevErr = false; }
                               else
                               {
                                   const char* exprType = $3->computeType(ASTErr);
-                                  if(retType!=exprType)
-                                  {
-                                      sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
-                                      yyerror(errmsg);
-                                  }
+                                  if(!ASTErr)
+                                      if(retType!=exprType)
+                                      {
+                                          sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
+                                          yyerror(errmsg);
+                                      }
                               } 
                               $$ = nullptr; }
        | block RETURN { ASTErr = prevErr = false; }
@@ -296,11 +304,12 @@ funBody: RETURN { ASTErr = prevErr = false; }
                                     else
                                     {
                                         const char* exprType = $4->computeType(ASTErr);
-                                        if(retType!=exprType)
-                                        {
-                                            sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
-                                            yyerror(errmsg);
-                                        }
+                                        if(!ASTErr)
+                                            if(retType!=exprType)
+                                            {
+                                                sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
+                                                yyerror(errmsg);
+                                            }
                                     }
                                     $$ = $1;}
        | block    { if(retType!="v")
@@ -315,14 +324,12 @@ paramList: param    { $$ = new class IDList;
                       if($1[0]!='\0')
                       {
                         $$->IDs.insert({$1, ids.IDs[$1]});
-                        ids.IDs.erase($1);
                       } }
          | paramList ',' param    { $$ = $1;
                                     if($3[0]!='\0')
                                         if(!$$->existsVar($3))
                                         {
                                             $$->IDs.insert({$3, ids.IDs[$3]});
-                                            ids.IDs.erase($3);
                                         }
                                         else
                                         {
@@ -368,11 +375,10 @@ block: statement ';'    { $$ = $1; }
                               }
      ;
 
-statement: varDecl    { if(strstr(scope, "Global Variables")!=scope && strstr(scope, "Main Program")!=scope)
+statement: varDecl    { if(strstr(scope, "Global Variables")!=scope && strstr(scope, "Main Program")!=scope && $1[0]!='\0') 
                         {
                             $$ = new class IDList;
                             $$->IDs.insert({$1, ids.IDs[$1]});
-                            ids.IDs.erase($1);
                         } }
          | functionCall    { $$ = nullptr; }
          | assignment    { $$ = nullptr; }
@@ -545,8 +551,20 @@ assignable: ID    { $$ = nullptr;
           //| ID ACCESS ID
           ;
 
-functionCall: ID '(' ')'
-            | ID '(' argList ')'
+functionCall: ID '(' ')'    { if(fs.existsFun($1))
+                                  ;
+                              else
+                              {
+                                  sprintf(errmsg, "Function '%s' was not found in this scope.", $1);
+                                  yyerror(errmsg);
+                              } }
+            | ID '(' argList ')'    { if(fs.existsFun($1))
+                                      ;
+                                      else
+                                      {
+                                          sprintf(errmsg, "Function '%s' was not found in this scope.", $1);
+                                          yyerror(errmsg);
+                                      } }
             ;
 
 argList: expr
@@ -659,12 +677,7 @@ int main(int argc, char** argv)
 {
      yyin = fopen(argv[1],"r");
      yyparse();
-     cout << "Custom-types:" << endl;
-     cts.printCustoms();
-     cout << "Variables:" << endl;
-     ids.printVars(false);
-     cout << "Functions:" << endl;
-     fs.printFuns();
+     printToFile(argv[1], ids, fs);
 
 }
 // CLASSES MIGHT WORK WITH [KEY] INSTEAD OF .AT(KEY) - P.S.: THEY WORK MY AHH

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <unordered_map>
 #include <string>
 
@@ -32,10 +33,10 @@ public:
     VarInfo();
     VarInfo(const char type, const bool variable, const int size, const string scope);
     VarInfo(const string type, const bool variable, const int size, const string scope, const class CustomTypesList *cts);
-    void printType() const;
-    void printPlainVal() const;
-    void printArray() const;
-    void printCustomVar() const;
+    void printType(ofstream& out) const;
+    void printPlainVal(ofstream& out) const;
+    void printArray(ofstream& out) const;
+    void printCustomVar(ofstream& out) const;
     ~VarInfo();
 };
 
@@ -52,7 +53,7 @@ public:
     VarInfo *accessCustomField(const string name, const string field);
     void setValue(const string name, const char *value);
     void copyValue(const string name, const class VarInfo* target);
-    void printVars(const bool compact) const;
+    void printVars(ofstream& out, const bool compact) const;
     IDList& operator+=(IDList& other);
     ~IDList();
 };
@@ -83,8 +84,9 @@ class FunctionsList
 {
 public:
     unordered_map<string, FunInfo> Funs;
+    bool existsFun(const char* name);
     void addFun(const char* name, const char* retType, IDList* params, IDList* other);
-    void printFuns() const;
+    void printFuns(ofstream& out) const;
 };
 
 class ASTNode
@@ -103,3 +105,5 @@ public:
     bool computeBoolVal(bool& triggerErr);
     void destroyTree();
 };
+
+void printToFile(const char* name, const IDList& vars, const FunctionsList& funs);
