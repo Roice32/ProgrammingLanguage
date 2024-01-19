@@ -18,35 +18,36 @@ char prevScope[256];
 class IDList ids;
 class CustomTypesList cts;
 class FunctionsList fs;
+string retType;
 %}
 
 %union {
      char* ID;
      char* typeInfo;
      char* rawValue;
-     class IDList* fieldsList;
+     class IDList* innerIDs;
      class ASTNode* exprAST;
      class VarInfo* assignTo;
 }
 
 %token BEGINC ENDC BEGINGV ENDGV BEGINGF ENDGF BEGINP ENDP
+%token IF ELSE WHILE FOR DO
 %token EVAL TYPEOF
+%token RETURN
 %type <typeInfo> variability
 %token <typeInfo> VARIABLE CONSTANT
-%type <typeInfo> typeUnion type
-%token <typeInfo> INT FLOAT CHAR STRING BOOL
-%type <ID> varDecl member
+%type <typeInfo> type typeUnion returnType
+%token <typeInfo> INT FLOAT CHAR STRING BOOL VOID
+%token <rawValue> INT_VAL FLOAT_VAL CHAR_VAL STRING_VAL BOOL_VAL
+%type <innerIDs> contents paramList funBody block statement
+%type <assignTo> assignable
+%type <exprAST> expr
+%type <ID> varDecl member param
 %token <ID> ID
 %token CUSTOM ACCESS ASSIGN
 %token ADD SUB MUL DIV MOD POW
 %token EQ NEQ LEQ GEQ LESS MORE
 %token NOT AND OR
-%type <fieldsList> contents
-%token <rawValue> INT_VAL FLOAT_VAL CHAR_VAL STRING_VAL BOOL_VAL
-%type <assignTo> assignable
-%type <exprAST> expr
-%token IF ELSE WHILE FOR DO
-%token RETURN
 %start progr
 
 %left ADD SUB
@@ -108,6 +109,7 @@ contents: member ';'    { $$ = new class IDList;
 
 // TO DO: ALSO LET IT BE A METHOD
 member: varDecl    { $$ = $1; }
+      //| funDecl 
       ;
 
 globalVariables: BEGINGV { sprintf(scope, "Global Variables"); } ENDGV
@@ -118,7 +120,6 @@ varDeclarations: varDecl ';'
 	          | varDeclarations varDecl ';'   
 	          ;
 
-//      | CHECK SCOPE WHEN ASSIGNING
 varDecl : variability typeUnion ID    { $$ = strdup("");
                                         if(!ids.existsVar($3))
                                         {
@@ -260,92 +261,197 @@ funDeclarations: funDecl
                | funDeclarations funDecl
                ;
 
-funDecl: type ID '(' ')' '{' funBody '}'
-       | type ID '(' paramList ')' '{' funBody'}'
+funDecl: returnType ID '(' { snprintf(prevScope, 256, "%s", scope);
+                             snprintf(scope, 256, "%s > %s", prevScope, $2);
+                             retType = $1; }
+                          ')' '{' funBody '}'    { fs.addFun($2, $1, nullptr, $7);
+                                                   snprintf(scope, 256, "%s", prevScope); }
+       | returnType ID '(' { snprintf(prevScope, 256, "%s", scope);
+                             snprintf(scope, 256, "%s > %s", prevScope, $2);
+                             retType = $1; } 
+                          paramList ')' '{' funBody'}'    { fs.addFun($2, $1, $5, $8);
+                                                            snprintf(scope, 256, "%s", prevScope); }
        ;
 
-funBody: RETURN expr ';'
-       | block RETURN expr ';'
-       | block
+returnType: typeUnion    { $$ = $1; }
+          | VOID    { $$ = $1; }
+          ;
+
+funBody: RETURN { ASTErr = prevErr = false; }
+                expr ';'    { if(retType=="v")
+                                  yyerror("Return value found inside of 'Void' function.");
+                              else
+                              {
+                                  const char* exprType = $3->computeType(ASTErr);
+                                  if(retType!=exprType)
+                                  {
+                                      sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
+                                      yyerror(errmsg);
+                                  }
+                              } 
+                              $$ = nullptr; }
+       | block RETURN { ASTErr = prevErr = false; }
+                      expr ';'    { if(retType=="v")
+                                        yyerror("Return value found inside of 'Void' function.");
+                                    else
+                                    {
+                                        const char* exprType = $4->computeType(ASTErr);
+                                        if(retType!=exprType)
+                                        {
+                                            sprintf(errmsg, "Return of '%s' value inside of '%s' function.", prettyExprType(exprType), prettyExprType(retType.c_str()));
+                                            yyerror(errmsg);
+                                        }
+                                    }
+                                    $$ = $1;}
+       | block    { if(retType!="v")
+                    {
+                        sprintf(errmsg, "Missing Return of '%s' value.", prettyExprType(retType.c_str()));
+                        yyerror(errmsg);
+                    }
+                    $$ = $1; }
        ;
 
-paramList: param
-         | paramList ',' param 
+paramList: param    { $$ = new class IDList;
+                      if($1[0]!='\0')
+                      {
+                        $$->IDs.insert({$1, ids.IDs[$1]});
+                        ids.IDs.erase($1);
+                      } }
+         | paramList ',' param    { $$ = $1;
+                                    if($3[0]!='\0')
+                                        if(!$$->existsVar($3))
+                                        {
+                                            $$->IDs.insert({$3, ids.IDs[$3]});
+                                            ids.IDs.erase($3);
+                                        }
+                                        else
+                                        {
+                                            sprintf(errmsg, "Redeclaration of identifier '%s'.", $3);
+                                            yyerror(errmsg);
+                                        } }
          ;
             
-param: type ID 
+param: variability typeUnion ID    { $$ = strdup("");
+                                     if(!ids.existsVar($3))
+                                     {
+                                        if(isPlainType($2))
+                                        {
+                                            ids.addVar($3, ($1[0]=='v'?true:false), $2[0], scope);
+                                            $$ = strdup($3);
+                                        }
+                                        else if(cts.existsCustom($2))
+                                        {
+                                            ids.addCustomVar($3, ($1[0]=='v'?true:false), $2, scope, &cts);
+                                            $$ = strdup($3);
+                                        }
+                                        else
+                                        {
+                                            sprintf(errmsg, "Custom-type '%s' not defined.", $2);
+                                            yyerror(errmsg);
+                                        }
+                                     }
+                                     else
+                                     {
+                                         sprintf(errmsg, "Redeclaration of identifier '%s'.", $3);
+                                         yyerror(errmsg);
+                                     } }
      ; 
       
 mainProgram: BEGINP { sprintf(scope, "Main Program"); } ENDP
            | BEGINP { sprintf(scope, "Main Program"); } block ENDP
            ;
 
-block: statement ';' 
-     | block statement ';'
+block: statement ';'    { $$ = $1; }
+     | block statement ';'    { $$ = $1;
+                                if($2!=nullptr)
+                                    *$$ += *$2;
+                              }
      ;
 
-statement: varDecl
-         | functionCall
-         | assignment
-         | ID ACCESS functionCall
+statement: varDecl    { if(strstr(scope, "Global Variables")!=scope && strstr(scope, "Main Program")!=scope)
+                        {
+                            $$ = new class IDList;
+                            $$->IDs.insert({$1, ids.IDs[$1]});
+                            ids.IDs.erase($1);
+                        } }
+         | functionCall    { $$ = nullptr; }
+         | assignment    { $$ = nullptr; }
+         | ID ACCESS functionCall    { $$ = nullptr; }
          | IF    { ASTErr = prevErr = false; }
               '(' expr ')'    { const char* exprType = $4->computeType(ASTErr);
                                     if(!ASTErr && (exprType[0]!='b' || strlen(exprType)>1))
                                         yyerror("'If' condition must be of 'Bool' type.");
                                     strcpy(prevScope, scope);
                                     snprintf(scope, 256, "%s > If(L%d)", prevScope, yylineno); }
-              '{' block '}' ELSE    { snprintf(scope, 256, "%s > Otherwise(L%d)", prevScope, yylineno); }
-                                 '{' block '}'    { snprintf(scope, 256, "%s", prevScope); }
+              '{' block '}' ELSE    { snprintf(scope, 256, "%s > Otherwise(L%d)", prevScope, yylineno);}
+                                 '{' block '}'    { snprintf(scope, 256, "%s", prevScope);
+                                                    $$ = $8;
+                                                    if($13!=nullptr)
+                                                        if($$!=nullptr)
+                                                            *$$ += *$13;
+                                                        else
+                                                            $$ = $13; }
          | WHILE     { ASTErr = prevErr = false; }
                  '(' expr ')'    { const char* exprType = $4->computeType(ASTErr);
                                    if(!ASTErr && (exprType[0]!='b' || strlen(exprType)>1))
                                        yyerror("'If' condition must be of 'Bool' type.");
                                    strcpy(prevScope, scope);
                                    snprintf(scope, 256, "%s > LoopWhile(L%d)", prevScope, yylineno); }
-                              '{' block '}'    { snprintf(scope, 256, "%s", prevScope); }
+                              '{' block '}'    { snprintf(scope, 256, "%s", prevScope);
+                                                 $$ = $8; }
          | FOR     { ASTErr = prevErr = false; }
                '(' assignment ';' expr ';' assignment ')'     { const char* exprType = $6->computeType(ASTErr);
                                                                     if(!ASTErr && (exprType[0]!='b' || exprType[1]!='\0'))
                                                                         yyerror("'For' condition must be of 'Bool' type.");
                                                                     strcpy(prevScope, scope);
                                                                     snprintf(scope, 256, "%s > For(L%d)", prevScope, yylineno); }
-                                                          DO '{' block '}'     { snprintf(scope, 256, "%s", prevScope); }
-         | EVAL { ASTErr = prevErr = false; } '(' expr ')'    { const char* exprType = $4->computeType(ASTErr);
-                                                                if(!ASTErr)
+                                                          DO '{' block '}'     { snprintf(scope, 256, "%s", prevScope);
+                                                                                 $$ = $13; }
+         | EVAL { ASTErr = prevErr = false; } '(' expr ')'    { if(strstr(scope, "Main Program")==scope)
                                                                 {
-                                                                    if(strlen(exprType)>1 || !(exprType[0]=='i' || exprType[0]=='f' || exprType[0]=='b'))
+                                                                    const char* exprType = $4->computeType(ASTErr);
+                                                                    if(!ASTErr)
                                                                     {
-                                                                        sprintf(errmsg, "Eval: Cannot compute value of expression that is not of type Int, Float, or Bool.");
-                                                                        yyerror(errmsg);
+                                                                        if(strlen(exprType)>1 || !(exprType[0]=='i' || exprType[0]=='f' || exprType[0]=='b'))
+                                                                        {
+                                                                            sprintf(errmsg, "Eval: Cannot compute value of expression that is not of type Int, Float, or Bool.");
+                                                                            yyerror(errmsg);
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            ASTErr = false;
+                                                                            if(exprType[0]=='i')
+                                                                            {
+                                                                                int res = $4->computeIntVal(ASTErr);
+                                                                                if(!ASTErr)
+                                                                                    printf("Value of 'Int' expression at line %d: %d.\n", yylineno, res);
+                                                                                else
+                                                                                    yyerror("Eval concluded NaN (either division by zero or negative exponent).");
+                                                                            } else if(exprType[0]=='f')
+                                                                            { 
+                                                                                float res = $4->computeFloatVal(ASTErr);
+                                                                                if(!ASTErr)
+                                                                                    printf("Value of 'Float' expression at line %d: %f.\n", yylineno, res);
+                                                                                else
+                                                                                    yyerror("Eval concluded NaN (either division by zero or attempt of unsupported '%').");
+                                                                            } else
+                                                                            {
+                                                                                bool res = $4->computeBoolVal(ASTErr);
+                                                                                if(!ASTErr)
+                                                                                    printf("Value of 'Bool' expression at line %d: %s.\n", yylineno, res?"true":"false");
+                                                                                else
+                                                                                    yyerror("Eval concluded Maybe (sub-expression evaluated to NaN).");
+                                                                            }
+                                                                        }
                                                                     }
-                                                                    else
-                                                                    {
-                                                                        ASTErr = false;
-                                                                        if(exprType[0]=='i')
-                                                                        {
-                                                                            int res = $4->computeIntVal(ASTErr);
-                                                                            if(!ASTErr)
-                                                                                printf("Value of 'Int' expression at line %d: %d.\n", yylineno, res);
-                                                                            else
-                                                                                yyerror("Eval concluded NaN (either division by zero or negative exponent).");
-                                                                        } else if(exprType[0]=='f')
-                                                                        { 
-                                                                            float res = $4->computeFloatVal(ASTErr);
-                                                                            if(!ASTErr)
-                                                                                printf("Value of 'Float' expression at line %d: %f.\n", yylineno, res);
-                                                                            else
-                                                                                yyerror("Eval concluded NaN (either division by zero or attempt of unsupported '%').");
-                                                                        } else
-                                                                        {
-                                                                            bool res = $4->computeBoolVal(ASTErr);
-                                                                            if(!ASTErr)
-                                                                                printf("Value of 'Bool' expression at line %d: %s.\n", yylineno, res?"true":"false");
-                                                                            else
-                                                                                yyerror("Eval concluded Maybe (sub-expression evaluated to NaN).");
-                                                                        } } } }
-         | TYPEOF { ASTErr = prevErr = false; } '(' expr ')'    { const char* exprType = $4->computeType(ASTErr);
-                                                                  if(!ASTErr)
-                                                                      printf("TypeOf expression at line %d: %s.\n", yylineno, prettyExprType(exprType));
+                                                                }
+                                                                $4->destroyTree(); }
+         | TYPEOF { ASTErr = prevErr = false; } '(' expr ')'    { if(strstr(scope, "Main Program")==scope)
+                                                                  {
+                                                                      const char* exprType = $4->computeType(ASTErr);
+                                                                      if(!ASTErr)
+                                                                          printf("TypeOf expression at line %d: %s.\n", yylineno, prettyExprType(exprType));
+                                                                  }
                                                                   $4->destroyTree(); }
          ;
 
@@ -556,7 +662,10 @@ int main(int argc, char** argv)
      cout << "Custom-types:" << endl;
      cts.printCustoms();
      cout << "Variables:" << endl;
-     ids.printVars();
+     ids.printVars(false);
+     cout << "Functions:" << endl;
+     fs.printFuns();
+
 }
 // CLASSES MIGHT WORK WITH [KEY] INSTEAD OF .AT(KEY) - P.S.: THEY WORK MY AHH
 // TO DO OVERALL: METHODS & FUNCTIONS

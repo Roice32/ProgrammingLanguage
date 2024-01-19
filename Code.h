@@ -52,7 +52,8 @@ public:
     VarInfo *accessCustomField(const string name, const string field);
     void setValue(const string name, const char *value);
     void copyValue(const string name, const class VarInfo* target);
-    void printVars() const;
+    void printVars(const bool compact) const;
+    IDList& operator+=(IDList& other);
     ~IDList();
 };
 
@@ -72,12 +73,18 @@ class FunInfo
 public:
     string returnType;
     int nParam;
+    IDList params;
+    bool hasOther;
+    IDList other;
+    FunInfo(const char* returnType, IDList* params, IDList* other);
 };
 
 class FunctionsList
 {
 public:
     unordered_map<string, FunInfo> Funs;
+    void addFun(const char* name, const char* retType, IDList* params, IDList* other);
+    void printFuns() const;
 };
 
 class ASTNode

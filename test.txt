@@ -9,6 +9,15 @@ Neverchanging Bool b;
     endGlobalVars
 
     beginGlobalFuns
+Void voidFun(Neverchanging Bool nb)
+{
+    Eval(1+1);
+}    
+Int yourFun(Changing Int yourA, Changing Float yourB)
+{
+    Neverchanging Bool yourC <-- true;
+    Return yourC;
+}
     endGlobalFuns
 
     beginProgram

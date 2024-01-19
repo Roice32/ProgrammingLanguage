@@ -1,6 +1,8 @@
 #include <cmath>
 #include "Code.h"
 
+extern void yyerror(const char* s);
+
 bool isPlainType(const char *type)
 {
     return type[1] == '\0' && (type[0] == 'i' || type[0] == 'f' || type[0] == 'c' || type[0] == 's' || type[0] == 'b');
@@ -16,6 +18,7 @@ const char* prettyExprType(const char *type)
         case 'c': return "Char"; break;
         case 's': return "String"; break;
         case 'b': return "Bool"; break;
+        case 'v': return "Void";
         }
     char temp[64];
     sprintf(temp, "Custom (%s)", type);
@@ -264,10 +267,12 @@ bool IDList::existsVar(const string name) const
     return IDs.find(name) != IDs.end();
 }
 
-void IDList::printVars() const
+void IDList::printVars(const bool compact) const
 {
+    int elemsLeft = this->IDs.size();
     for (const auto &var : IDs)
     {
+        --elemsLeft;
         cout << "[Name: " << var.first << ", Type: ";
         var.second.printType();
         cout << ", " << (var.second.isVariable ? "Variable" : "Constant");
@@ -288,8 +293,23 @@ void IDList::printVars() const
             cout << ", Value: ";
             var.second.printPlainVal();
         }
-        cout << ", Scope: " << var.second.scope << "]\n";
+        cout << ", Scope: " << var.second.scope << ((compact && elemsLeft==0)?"]":"]\n");
     }
+}
+
+IDList& IDList::operator+=(IDList& other)
+{
+    char errmsg[128];
+    for(auto& pair: other.IDs)
+        if(this->existsVar(pair.first))
+        {
+            sprintf(errmsg, "Redeclaration of identifier '%s'.", pair.first.c_str());
+            yyerror(errmsg);
+        }
+        else
+            this->IDs.insert({pair.first, other.IDs[pair.first]});
+    //delete &other;
+    return *this;
 }
 
 IDList::~IDList()
@@ -340,6 +360,51 @@ void CustomTypesList::printCustoms() const
 CustomTypesList::~CustomTypesList()
 {
     CustomTypes.clear();
+}
+
+FunInfo::FunInfo(const char* returnType, IDList* params, IDList* other)
+{
+    this->returnType = prettyExprType(returnType);
+    this->nParam = 0;
+    if(params!=nullptr)
+    {
+        this->nParam = params->IDs.size();
+        this->params = *params;
+        //delete params;
+    }
+    this->hasOther = false;
+    if(other!=nullptr)
+    {
+        this->hasOther = true;
+        this->other = *other;
+        //delete other;
+    }
+}
+
+void FunctionsList::addFun(const char* name, const char* retType, IDList* params, IDList* other)
+{
+    FunInfo info(retType, params, other);
+    this->Funs.insert({name, info});
+}
+
+void FunctionsList::printFuns() const
+{
+    for(auto& f: this->Funs)
+    {
+        cout << "\t[Name: " << f.first;
+        cout << ", Return type: " << f.second.returnType;
+        cout << ",\nParameters (" << f.second.nParam << "): {";
+        f.second.params.printVars(true);
+        cout << " }";
+        if(f.second.hasOther)
+        {
+            cout << ",\nOther variables: {";
+            f.second.other.printVars(true);
+            cout << "}]\n";
+        }
+        else
+            cout << "]\n";
+    }
 }
 
 ASTNode::ASTNode(const char *type, const char *rawValue)
